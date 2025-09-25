@@ -41,5 +41,5 @@ IV] Team Members:
    - Renato Miguel Cruz Faria (40211900) 
 
 V] Languages & Techniques:
-  - TBD
+  - TBD (Thinking PHP for backend, bootstrap frontend, xml dbs)
     
