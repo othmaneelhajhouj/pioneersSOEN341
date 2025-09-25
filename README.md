@@ -22,20 +22,23 @@ III] Core Features & Breakdown:
    - Students are able to receive a digital ticket in the form of a QR code.
 
 #2: Organizer experience - Event creation & analytics:
+
    - Organizers are able to create events
    - Organizers are able to access event analytics in the form of statistics
-   - Organizers are able to use tools to manage event attendance 
+   - Organizers are able to use tools to manage event attendance
 
-#3: Administrator experience - Overview Dashboard & Website Moderation:
-	- Administrators are able to modedrate the platform using an oversight tab
-	- Administrators are able to view the platform's global stats
-	- Administrators are able to manage organizations and assign roles
-	
+#3: Administrator Experience - Overview Dashboard & Website Moderation:
+
+   - Administrators are able to moderate the platform using an oversight tab
+   - Administrators are able to view the platform's global stats
+   - Administrators are able to manage organizations and assign roles
+
 IV] Team Members:
-	- Alek Zmarzlak (40227624)
-	- Klisea Plaku (40313343)
-	- Othmane El Hajhouj (40260055)
-    - Renato Miguel Cruz Faria (40211900)
+
+   - Alek Zmarzlak (40227624)
+   - Klisea Plaku (40313343)
+   - Othmane El Hajhouj (40260055)
+   - Renato Miguel Cruz Faria (40211900) 
 
 V] Languages & Techniques:
   - TBD
