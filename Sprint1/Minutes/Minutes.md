@@ -15,12 +15,3 @@ Meeting #2:
 - Attendees: Alek, Othmane, Renato, Klisea
 
 - Discussion: We each assigned the user stories for sprint 2, deciding to focus on the administrator role for the coming sprint. We also lightly discussed the language we were going to use for the project. Some ideas were thrown, such as PHP, HTML, JavaScript, Node.Js, Bootstrap, etc. We planned the next meeting to be on October 1st, 2025, where we would review each other's currently assigned work.
-
--------- Sprint 2 --------
-
-Meeting #X:
-- Time & Date:
-- Location:
-- Attendees:
-
-- Discussion:
