@@ -36,7 +36,7 @@ III] Core Features & Breakdown:
 IV] Team Members:
 
    - Alek Zmarzlak (40227624)
-   - Klisea Plaku (40313343)
+   - @Klisea-P - Klisea Plaku (40313343) - Frontend
    - Othmane El Hajhouj (40260055)
    - @WTV26 - Renato Miguel Cruz Faria (40211900) - Backend and Databases
 
