@@ -41,5 +41,5 @@ IV] Team Members:
    - @WTV26 - Renato Miguel Cruz Faria (40211900) - Backend and Databases
 
 V] Languages & Techniques:
-  - TBD (Thinking PHP for backend, bootstrap frontend, xml dbs)
+  - TBD (nodejs with express and ejs backend, bootstrap frontend, prisma ORM for db)
     
