@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  student
+  organizer
+  admin
+}
+
+enum TicketType {
+  free
+  paid
+}
+
+enum TicketStatus {
+  claimed
+  used
+}
+
+model User {
+  id        String   @id @default(cuid(2))
+  email     String   @unique
+  firstName String
+  lastName  String?
+  role      Role
+  tickets   Ticket[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+}
+
+model Event {
+  id          String     @id @default(cuid(2))
+  title       String
+  description String
+  startsAt    DateTime
+  endsAt      DateTime
+  location    String
+  type        TicketType
+  price       Int? 
+  capacity    Int
+  tickets     Ticket[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([startsAt])
+  @@index([location])
+}
+
+model Ticket {
+  id        String       @id @default(cuid(2))
+  eventId   String
+  userId    String
+  qrToken   String       @unique
+  status    TicketStatus @default(claimed)
+  claimedAt DateTime     @default(now())
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([eventId])
+}
