@@ -4,23 +4,21 @@
   "description": "Node server for SOEN341 project",
   "license": "ISC",
   "author": "",
-  "type": "commonjs",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "devstart": "nodemon app.js"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
+    "generated-prisma": "file:./generated/prisma",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
-    "morgan": "^1.10.1"
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
-    "@types/express": "^5.0.3",
-    "@types/node": "^24.6.1",
+    "morgan": "^1.10.1",
     "nodemon": "^3.1.10",
-    "prisma": "^6.16.3",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "prisma": "^6.16.3"
   }
 }
