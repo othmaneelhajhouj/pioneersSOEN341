@@ -4,10 +4,14 @@
   "description": "Node server for SOEN341 project",
   "license": "ISC",
   "author": "",
-  "type": "module",
+  "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "devstart": "nodemon app.js"
+    "devstart": "nodemon app.js",
+    "seed": "node prisma/seed.js",
+    "prisma:gen": "prisma generate",
+    "prisma:migrate": "prisma migrate dev"
+
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
