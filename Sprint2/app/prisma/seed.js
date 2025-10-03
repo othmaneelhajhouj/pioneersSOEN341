@@ -1,5 +1,5 @@
-import { PrismaClient } from "generated-prisma/client";
-const prisma = new PrismaClient
+const { PrismaClient } = require("generated-prisma/client");
+const prisma = new PrismaClient()
 
 async function main() {
   // Reset existing data to keep the seed unchanged during local development
