@@ -27,30 +27,48 @@ enum TicketStatus {
   used
 }
 
+enum OrganizerStatus {
+  pending
+  approved
+  denied
+  revoked
+}
+
 model User {
-  id        String   @id @default(cuid(2))
+  id        String   @id @default(cuid())
   email     String   @unique
   firstName String
   lastName  String?
   role      Role
   tickets   Ticket[]
+  events    Event[]  @relation("OrganizerEvents")
+
+  // status flags for admins to approve/deny users for manager account 
+  organizerStatus OrganizerStatus @default(pending)
+  approvedBy      String?
+  approvedAt      DateTime?
+  decisionReason  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([organizerStatus])
 }
 
 model Event {
-  id          String     @id @default(cuid(2))
+  id          String     @id @default(cuid())
   title       String
   description String
   startsAt    DateTime
   endsAt      DateTime
   location    String
   type        TicketType
-  price       Int? 
+  price       Int?
   capacity    Int
   tickets     Ticket[]
+  published   Boolean    @default(false)
+  organizerId String
+  organizer   User       @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Restrict)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -61,7 +79,7 @@ model Event {
 }
 
 model Ticket {
-  id        String       @id @default(cuid(2))
+  id        String       @id @default(cuid())
   eventId   String
   userId    String
   qrToken   String       @unique
@@ -71,7 +89,7 @@ model Ticket {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
