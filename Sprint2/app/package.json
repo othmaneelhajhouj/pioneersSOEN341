@@ -7,17 +7,15 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "devstart": "nodemon app.js",
+    "dev": "nodemon app.js",
     "seed": "node prisma/seed.js",
     "prisma:gen": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
-
   },
   "dependencies": {
-    "@prisma/client": "^6.16.3",
-    "generated-prisma": "file:./generated/prisma",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
+    "generated-prisma": "file:./generated/prisma",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
