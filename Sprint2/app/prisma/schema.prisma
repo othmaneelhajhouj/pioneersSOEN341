@@ -43,7 +43,6 @@ model User {
   tickets   Ticket[]
   events    Event[]  @relation("OrganizerEvents")
 
-  // status flags for admins to approve/deny users for manager account 
   organizerStatus OrganizerStatus @default(pending)
   approvedBy      String?
   approvedAt      DateTime?
