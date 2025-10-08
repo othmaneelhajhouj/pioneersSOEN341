@@ -9,14 +9,7 @@ const router = express.Router();
 // GET /events
 // Display list of all published events available to students
 
-router.get('/', async (req, res) => {
-
-    // Get list of events from controller
-    const events = await eventsController.event_index_student();
-        
-    // Render the student index page 
-    res.render('student/index', { events });
-});
+router.get('/', eventsController.event_index_student);
 
 // GET /events/:id
 // Display details of a specific event for students

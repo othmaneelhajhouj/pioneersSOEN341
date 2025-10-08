@@ -21,7 +21,7 @@ const event_index_student = async (req, res) => {
         _count: { select: { tickets: true } }
       }
     });
-    res.json(events);
+    return res.render('student/index', { events });
   } catch (error) {
     console.error('Error fetching events:', error);
     res.status(500).json({ error: 'Failed to fetch events' });
