@@ -1,12 +1,12 @@
 import {Router, Request, Response} from "express";
 import {adminOnly} from "../middleware/adminOnly";
 import {listByStatus, setStatus} from "../services/organizerService";
-import {listQuery, decisionBody} from "../validation";
+import {organizerListQuery, organizerDecisionBody} from "../validation";
 
 export const adminOrganizers = Router();
 
 adminOrganizers.get("/organizers", adminOnly, async(req: Request,res: Response) => {
-    const parsed = listQuery.safeParse(req.query);
+    const parsed = organizerListQuery.safeParse(req.query);
     if (!parsed.success) return res.status(400).json({error: parsed.error.flatten()});
 
     const {status, take, cursor} = parsed.data;
@@ -17,7 +17,7 @@ adminOrganizers.get("/organizers", adminOnly, async(req: Request,res: Response) 
 
 for(const target of ["approved", "denied", "revoked"] as const) {
     adminOrganizers.post(`/organizers/:id/${target}`, adminOnly, async(req: Request, res: Response) => { //works for any status approved/denied/revoked because of ${target}
-        const parsed = decisionBody.safeParse(req.body);
+        const parsed = organizerDecisionBody.safeParse(req.body);
         if(!parsed.success) return res.status(400).json({error: parsed.error.flatten()})
 
         try {
