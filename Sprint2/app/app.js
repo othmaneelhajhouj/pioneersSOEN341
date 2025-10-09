@@ -10,6 +10,7 @@ const {adminEvents} = require('./dist/routes/adminEvents');
 const {adminAnalytics} = require('./dist/routes/adminAnalytics');
 const { adminAnalyticsTrends } = require('./dist/routes/adminAnalyticsTrends');
 const { adminRoleManagement } = require('./dist/routes/adminRoleManagement');
+const { adminOrganizations } = require('./dist/routes/adminOrganizations');
 
 const eventRoutes = require('./routes/events.public')
 
@@ -35,6 +36,7 @@ app.use("/events", require("./routes/events.public"));
 app.use("/organizers", require("./routes/events.organizer"));
 
 
+//all the ones that say compiled only work after npm run build x1
 //mount compiled adminOrganizers router 
 app.use('/admin', adminOrganizers);
 
@@ -49,6 +51,9 @@ app.use('/admin', adminAnalyticsTrends);
 
 //mount compiled adminRoleManagement router
 app.use('/admin', adminRoleManagement);
+
+//mount compiled adminOrganizations router
+app.use('/admin', adminOrganizations);
 
 //endpoint to check server health
 app.get('/health', (_req, res) => res.json({ok: true}));
