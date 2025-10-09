@@ -1,0 +1,11 @@
+01/09/2025
+- Setup project structure - 30 mins
+- Created initial database schema - 60 mins
+- Finalized backend tech stack - 30 mins
+
+02/09/2025
+- Introduced Prisma ORM to team member Othmane - 45 mins
+- Set up initial routes and controllers - 60 mins
+- Created initial views structure using EJS - 20 mins
+- Set up package.json and .gitignore file - 15 mins
+- Updated database schema with new needed fields in models for our goals - 60 mins

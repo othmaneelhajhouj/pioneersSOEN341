@@ -1,26 +1,49 @@
 {
-  "name": "app",
-  "version": "0.0.1",
+  "name": "sprint-2",
+  "version": "1.0.0",
   "description": "Node server for SOEN341 project",
-  "license": "ISC",
-  "author": "",
+  "main": "dist/server.js",
   "type": "commonjs",
-  "main": "index.js",
+  "author": "",
+  "license": "ISC",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "tsc",
+    "start": "npm run build && node app.js",
+    "test": "jest",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:generate": "prisma generate",
+    "prisma:studio": "prisma studio",
+    "devstart": "nodemon app.js",
+    "seed": "node prisma/seed.js",
+    "prisma:gen": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
+    "basic-auth": "^2.0.1",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
-    "morgan": "^1.10.1"
+    "generated-prisma": "file:./generated/prisma",
+    "morgan": "^1.10.1",
+    "qrcode": "^1.5.4",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/express": "^5.0.3",
-    "@types/node": "^24.6.1",
+    "@types/express": "^4.17.23",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^24.7.0",
+    "@types/supertest": "^2.0.16",
+    "jest": "^29.7.0",
     "nodemon": "^3.1.10",
     "prisma": "^6.16.3",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node"
   }
 }
