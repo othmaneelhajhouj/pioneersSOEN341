@@ -48,15 +48,14 @@ model User {
   role      Role
   tickets   Ticket[]
   events    Event[]  @relation("OrganizerEvents")
-
   organizerStatus OrganizerStatus @default(pending)
   approvedBy      String?
   approvedAt      DateTime?
   decisionReason  String?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
+  organizationId String?
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   @@index([organizerStatus])
 }
 
@@ -102,4 +101,13 @@ model Ticket {
 
   @@index([userId])
   @@index([eventId])
+}
+
+model Organization {
+  id String  @id @default(cuid())
+  name String @unique
+  description String?
+  users User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
