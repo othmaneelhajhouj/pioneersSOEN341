@@ -4,6 +4,7 @@ const { PrismaClient, OrganizerStatus } = require("generated-prisma/client");
 const crypto = require("crypto");
 const QRCode = require('qrcode');
 const {adminOrganizers} = require("./dist/routes/adminOrganizers");
+const {adminEvents} = require('./dist/routes/adminEvents');
 
 const eventRoutes = require('./routes/events.public')
 
@@ -28,8 +29,11 @@ app.listen(3000);
 app.use("/events", require("./routes/events.public"));
 app.use("/organizers", require("./routes/events.organizer"));
 
-//mount compiled admin router 
+//mount compiled adminOrganizers router 
 app.use('/admin', adminOrganizers);
+
+//mount compiled adminEvents router
+app.use('/admin', adminEvents);
 
 //endpoint to check server health
 app.get('/health', (_req, res) => res.json({ok: true}));

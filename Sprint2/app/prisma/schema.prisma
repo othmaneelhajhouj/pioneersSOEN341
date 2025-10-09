@@ -34,6 +34,12 @@ enum OrganizerStatus {
   revoked
 }
 
+enum ModerationStatus {
+  pending
+  approved
+  rejected
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -68,13 +74,15 @@ model Event {
   published   Boolean    @default(false)
   organizerId String
   organizer   User       @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Restrict)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  moderationStatus ModerationStatus @default(pending)
+  moderationReason String?
 
   @@index([type])
   @@index([startsAt])
   @@index([location])
+  @@index([moderationStatus])
 }
 
 model Ticket {
