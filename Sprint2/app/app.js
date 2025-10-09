@@ -78,24 +78,6 @@ app.get('/health', (_req, res) => res.json({ok: true}));
 
 
 //all the ones that say compiled only work after npm run build x1
-//mount compiled adminOrganizers router 
-app.use('/admin', adminOrganizers);
-
-//mount compiled adminEvents router
-app.use('/admin', adminEvents);
-
-//mount compiled adminAnalytics router
-app.use('/admin', adminAnalytics);
-
-//mount compiled adminAnalyticsTrends router
-app.use('/admin', adminAnalyticsTrends);
-
-//mount compiled adminRoleManagement router
-app.use('/admin', adminRoleManagement);
-
-//mount compiled adminOrganizations router
-app.use('/admin', adminOrganizations);
-
 //endpoint to check server health
 app.get('/health', (_req, res) => res.json({ok: true}));
 
