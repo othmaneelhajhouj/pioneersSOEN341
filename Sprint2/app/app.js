@@ -9,6 +9,7 @@ const {adminOrganizers} = require("./dist/routes/adminOrganizers");
 const {adminEvents} = require('./dist/routes/adminEvents');
 const {adminAnalytics} = require('./dist/routes/adminAnalytics');
 const { adminAnalyticsTrends } = require('./dist/routes/adminAnalyticsTrends');
+const { adminRoleManagement } = require('./dist/routes/adminRoleManagement');
 
 const eventRoutes = require('./routes/events.public')
 
@@ -45,6 +46,9 @@ app.use('/admin', adminAnalytics);
 
 //mount compiled adminAnalyticsTrends router
 app.use('/admin', adminAnalyticsTrends);
+
+//mount compiled adminRoleManagement router
+app.use('/admin', adminRoleManagement);
 
 //endpoint to check server health
 app.get('/health', (_req, res) => res.json({ok: true}));

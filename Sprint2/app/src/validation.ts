@@ -31,3 +31,9 @@ export const trendsQuery = z.object({
     to: z.coerce.date().optional(),
     buckets: z.enum(["day", "week"]).default("day"),
 });
+
+export const roleEnum = z.enum(["student", "organizer", "admin"]);
+
+export const setRoleBody = z.object({
+    role: roleEnum,
+});
