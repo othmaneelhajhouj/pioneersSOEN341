@@ -3,8 +3,11 @@ const morgan = require('morgan');
 const { PrismaClient, OrganizerStatus } = require("generated-prisma/client");
 const crypto = require("crypto");
 const QRCode = require('qrcode');
+
+//ATTENTION: the following requires will only work after you run "npm run build" once to create the /dist/ folder containing compiled JS files
 const {adminOrganizers} = require("./dist/routes/adminOrganizers");
 const {adminEvents} = require('./dist/routes/adminEvents');
+const {adminAnalytics} = require('./dist/routes/adminAnalytics');
 
 const eventRoutes = require('./routes/events.public')
 
@@ -29,11 +32,15 @@ app.listen(3000);
 app.use("/events", require("./routes/events.public"));
 app.use("/organizers", require("./routes/events.organizer"));
 
+
 //mount compiled adminOrganizers router 
 app.use('/admin', adminOrganizers);
 
 //mount compiled adminEvents router
 app.use('/admin', adminEvents);
+
+//mount compiled adminAnalytics router
+app.use('/admin', adminAnalytics);
 
 //endpoint to check server health
 app.get('/health', (_req, res) => res.json({ok: true}));
