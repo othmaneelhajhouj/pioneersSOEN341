@@ -2,9 +2,8 @@
   "name": "sprint-2",
   "version": "0.0.2",
   "description": "Node server for SOEN341 project",
-  "main": "dist/server.js",
-  "type": "commonjs",
   "main": "app.js",
+  "type": "commonjs",
   "author": "",
   "license": "ISC",
   "scripts": {
@@ -20,6 +19,7 @@
     "prisma:gen": "prisma generate"
   },
   "dependencies": {
+    "@prisma/client": "^6.16.3",
     "basic-auth": "^2.0.1",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
