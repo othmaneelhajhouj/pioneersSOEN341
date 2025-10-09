@@ -27,21 +27,40 @@ enum TicketStatus {
   used
 }
 
+enum OrganizerStatus {
+  pending
+  approved
+  denied
+  revoked
+}
+
+enum ModerationStatus {
+  pending
+  approved
+  rejected
+}
+
 model User {
-  id        String   @id @default(cuid(2))
+  id        String   @id @default(cuid())
   email     String   @unique
   firstName String
   lastName  String?
   role      Role
   tickets   Ticket[]
   events    Event[]  @relation("OrganizerEvents")
-
+  organizerStatus OrganizerStatus @default(pending)
+  approvedBy      String?
+  approvedAt      DateTime?
+  decisionReason  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  organizationId String?
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  @@index([organizerStatus])
 }
 
 model Event {
-  id          String     @id @default(cuid(2))
+  id          String     @id @default(cuid())
   title       String
   description String
   startsAt    DateTime
@@ -53,18 +72,20 @@ model Event {
   tickets     Ticket[]
   published   Boolean    @default(false)
   organizerId String
-  organizer   User @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Restrict)
-
+  organizer   User       @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Restrict)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  moderationStatus ModerationStatus @default(pending)
+  moderationReason String?
 
   @@index([type])
   @@index([startsAt])
   @@index([location])
+  @@index([moderationStatus])
 }
 
 model Ticket {
-  id        String       @id @default(cuid(2))
+  id        String       @id @default(cuid())
   eventId   String
   userId    String
   qrToken   String       @unique
@@ -80,4 +101,13 @@ model Ticket {
 
   @@index([userId])
   @@index([eventId])
+}
+
+model Organization {
+  id String  @id @default(cuid())
+  name String @unique
+  description String?
+  users User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

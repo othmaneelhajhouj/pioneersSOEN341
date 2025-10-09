@@ -1,3 +1,6 @@
 node_modules
 .env
 generated
+prisma/dev.db
+dist/
+prisma/prisma/

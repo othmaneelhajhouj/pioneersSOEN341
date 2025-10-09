@@ -5,6 +5,10 @@ CREATE TABLE "User" (
     "firstName" TEXT NOT NULL,
     "lastName" TEXT,
     "role" TEXT NOT NULL,
+    "organizerStatus" TEXT NOT NULL DEFAULT 'pending',
+    "approvedBy" TEXT,
+    "approvedAt" DATETIME,
+    "decisionReason" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
 );
@@ -21,8 +25,10 @@ CREATE TABLE "Event" (
     "price" INTEGER,
     "capacity" INTEGER NOT NULL,
     "published" BOOLEAN NOT NULL DEFAULT false,
+    "organizerId" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "Event_organizerId_fkey" FOREIGN KEY ("organizerId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -42,6 +48,9 @@ CREATE TABLE "Ticket" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE INDEX "User_organizerStatus_idx" ON "User"("organizerStatus");
 
 -- CreateIndex
 CREATE INDEX "Event_type_idx" ON "Event"("type");
