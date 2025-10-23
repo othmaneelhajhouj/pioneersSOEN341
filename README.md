@@ -3,7 +3,6 @@
 ## Project Description
 
 This is a university campus events & ticketing web application designed to enable students to access and browse various event postings. Students can save events, claim tickets, and check-in using QR codes. The app additionally offers organizer & administrator profiles, with the ability to create and manage events using analytics such as attendance rate, accessible through a dedicated dashboard.
-and check-in using QR codes. Organizers and administrators can create and manage events, access attendance analytics, and use a dedicated dashboard for event oversight.
 
 - Offer a streamlined event management interface.
 - Improve student engagement in on-campus events.
@@ -37,5 +36,10 @@ and check-in using QR codes. Organizers and administrators can create and manage
 - [Renato Miguel Cruz Faria (@WTV26) — Backend/Databases/Frontend (40211900)](https://github.com/WTV26)
 
 ## Languages & Technologies
-  - JavaScript and TypeScript with Node.js (backend), Bootstrap (frontend), Prisma through SQLite (database)
+- JavaScript
+- TypeScript
+- Node.js (backend)
+- Bootstrap (frontend)
+- Prisma (ORM)
+- SQLite (database)
     
