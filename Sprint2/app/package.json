@@ -1,8 +1,8 @@
 {
   "name": "sprint-2",
-  "version": "1.0.0",
+  "version": "0.0.2",
   "description": "Node server for SOEN341 project",
-  "main": "dist/server.js",
+  "main": "app.js",
   "type": "commonjs",
   "author": "",
   "license": "ISC",

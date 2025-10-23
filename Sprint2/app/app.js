@@ -1,3 +1,10 @@
+/**
+ * MAIN APPLICATION FILE
+ * Entry point for the Event Management System
+ * Sets up Express server, middleware, routes, and error handling
+ */
+
+const path = require('path');
 const express = require('express');
 const morgan = require('morgan');
 const { PrismaClient, OrganizerStatus } = require("generated-prisma/client");
@@ -14,15 +21,25 @@ const { adminOrganizations } = require('./dist/routes/adminOrganizations');
 
 const eventRoutes = require('./routes/events.public')
 
+const { SERVER_PORT } = require('./utils/constants');
 const app = express();
-const prisma = new PrismaClient();
 
+// ==================== MIDDLEWARE ====================
+// Serve static files (CSS, JS, images) from the 'public' directory
+app.use(express.static(path.join(__dirname, "public")));
 
-app.use(express.static('public'));
-app.use(express.urlencoded({extended : true}));
+// Parse URL-encoded form data (from HTML forms)
+app.use(express.urlencoded({ extended: true }));
+
+// Parse JSON request bodies (from API calls)
 app.use(express.json());
+
+// HTTP request logger for development
 app.use(morgan('dev'));
+
+// Set EJS as the templating engine
 app.set('view engine', 'ejs');
+app.set("views", path.join(__dirname, "views"));
 
 //Temp auth to pass middleware (adminOnly for now), replace with real auth later
 app.use((req, _res, next) => {
@@ -30,9 +47,10 @@ app.use((req, _res, next) => {
     next();
 });
 
-app.listen(3000);
-
+// Public event routes (for students viewing events)
 app.use("/events", require("./routes/events.public"));
+
+// Organizer event routes (for creating and managing events)
 app.use("/organizers", require("./routes/events.organizer"));
 
 
@@ -58,7 +76,17 @@ app.use('/admin', adminOrganizations);
 //endpoint to check server health
 app.get('/health', (_req, res) => res.json({ok: true}));
 
-//404 error page
+
+//all the ones that say compiled only work after npm run build x1
+//endpoint to check server health
+
+// 404 - Route not found
 app.use((req, res) => {
-    res.status(404).send();
+  res.status(404).send();
+});
+
+// ==================== START SERVER ====================
+app.listen(SERVER_PORT, () => {
+  console.log(`Server running on http://localhost:${SERVER_PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });

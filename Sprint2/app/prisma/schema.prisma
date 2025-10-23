@@ -41,7 +41,7 @@ enum ModerationStatus {
 }
 
 model User {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid(2))
   email     String   @unique
   firstName String
   lastName  String?
@@ -60,7 +60,7 @@ model User {
 }
 
 model Event {
-  id          String     @id @default(cuid())
+  id          String     @id @default(cuid(2))
   title       String
   description String
   startsAt    DateTime
@@ -85,7 +85,7 @@ model Event {
 }
 
 model Ticket {
-  id        String       @id @default(cuid())
+  id        String       @id @default(cuid(2))
   eventId   String
   userId    String
   qrToken   String       @unique
@@ -104,7 +104,7 @@ model Ticket {
 }
 
 model Organization {
-  id String  @id @default(cuid())
+  id String  @id @default(cuid(2))
   name String @unique
   description String?
   users User[]
