@@ -19,8 +19,6 @@ const { adminAnalyticsTrends } = require('./dist/routes/adminAnalyticsTrends');
 const { adminRoleManagement } = require('./dist/routes/adminRoleManagement');
 const { adminOrganizations } = require('./dist/routes/adminOrganizations');
 
-const eventRoutes = require('./routes/events.public')
-
 const { SERVER_PORT } = require('./utils/constants');
 const app = express();
 
@@ -76,12 +74,8 @@ app.use('/admin', adminOrganizations);
 //endpoint to check server health
 app.get('/health', (_req, res) => res.json({ok: true}));
 
-
-//all the ones that say compiled only work after npm run build x1
-//endpoint to check server health
-
 // 404 - Route not found
-app.use((req, res) => {
+app.use((_req, res) => {
   res.status(404).send();
 });
 
