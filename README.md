@@ -37,5 +37,5 @@ and check-in using QR codes. Organizers and administrators can create and manage
 - [Renato Miguel Cruz Faria (@WTV26) — Backend/Databases/Frontend (40211900)](https://github.com/WTV26)
 
 ## Languages & Technologies
-  - Planned: JavaScript and TypeScript with Node.js (backend), Bootstrap (frontend), Prisma through SQLite (database)
+  - JavaScript and TypeScript with Node.js (backend), Bootstrap (frontend), Prisma through SQLite (database)
     
