@@ -18,7 +18,7 @@ export function requireApprovedOrganizer(
     }
 
     if (req.user.organizerStatus !== "approved") {
-        return res.status(403).json({error: "Organizer qpprovql required"});
+        return res.status(403).json({error: "Organizer approval required"});
     }
 
     next();
