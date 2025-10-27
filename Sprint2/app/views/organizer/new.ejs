@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Create Event</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <%- include('../partials/nav', { active: 'organizer:new', injectStyles: true, brand: 'Organizer' }) %>
+</head>
+<body>
+<main class="container pb-5">
+  <div class="mb-4">
+    <h1 class="h3 fw-bold mb-1">Create Event</h1>
+    <p class="text-secondary small mb-0">Fill out the details below and publish when you're ready.</p>
+  </div>
+
+  <% if (errors && errors.length) { %>
+    <div class="alert alert-danger">
+      <strong><i class="fa-solid fa-triangle-exclamation me-1"></i> Please fix the following:</strong>
+      <ul class="mb-0 mt-2">
+        <% errors.forEach(e => { %><li><%= e %></li><% }) %>
+      </ul>
+    </div>
+  <% } %>
+
+  <form action="/organizers/<%= organizerId %>/events" method="POST" class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="card mb-3">
+        <div class="card-header">Details</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Title</label>
+            <input class="form-control" name="title" value="<%= values.title || '' %>" required />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" rows="5" name="description" required><%= values.description || '' %></textarea>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label">Start Date</label>
+              <input class="form-control" id="pageStartDate" type="date" required />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Start Time</label>
+              <input class="form-control" id="pageStartTime" type="time" step="300" required />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">End Date</label>
+              <input class="form-control" id="pageEndDate" type="date" required />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">End Time</label>
+              <input class="form-control" id="pageEndTime" type="time" step="300" required />
+            </div>
+            <input type="hidden" name="startsAt" id="pageStarts" value="<%= values.startsAt || '' %>" />
+            <input type="hidden" name="endsAt" id="pageEnds" value="<%= values.endsAt || '' %>" />
+          </div>
+          <div class="row g-3 mt-1">
+            <div class="col-md-6">
+              <label class="form-label">Location</label>
+              <input class="form-control" name="location" value="<%= values.location || '' %>" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Capacity</label>
+              <input class="form-control" type="number" min="1" name="capacity" value="<%= values.capacity || 50 %>" required />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="/organizers/<%= organizerId %>/events" class="btn btn-outline-light"><i class="fa-solid fa-arrow-left me-1"></i>Cancel</a>
+        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk me-1"></i>Create</button>
+      </div>
+    </div>
+    <div class="col-12 col-lg-4">
+      <div class="card mb-3">
+        <div class="card-header">Ticketing</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Type</label>
+            <select class="form-select" name="type" id="ticketType">
+              <option value="free" <%= values.type==='free'?'selected':'' %>>Free</option>
+              <option value="paid" <%= values.type==='paid'?'selected':'' %>>Paid</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Price (CAD)</label>
+            <input class="form-control" type="number" min="0" step="0.01" name="price" id="priceField" value="<%= values.price || '' %>" />
+            <div class="form-text">Ignored if event is Free</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">Publishing</div>
+        <div class="card-body">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="published" name="published" <%= values.published ? 'checked' : '' %>>
+            <label class="form-check-label" for="published">Publish immediately</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</main>
+<%- include('../partials/footer') %>
+<script src="/js/create-event.js"></script>
+</body>
+</html>
+
