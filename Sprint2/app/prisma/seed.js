@@ -6,6 +6,15 @@ async function main() {
   await prisma.ticket.deleteMany();
   await prisma.event.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.organization.deleteMany();
+
+  // Seed an organization
+  const org = await prisma.organization.create({
+    data: {
+      name: "CS Club",
+      description: "Computer science society",
+    },
+  });
 
   const studentUser = await prisma.user.create({
     data: {
@@ -23,6 +32,7 @@ async function main() {
       firstName: "Alex",
       lastName: "Smith",
       role: "organizer",
+      organizationId: org.id,
     },
   });
 
