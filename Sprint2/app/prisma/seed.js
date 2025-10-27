@@ -13,9 +13,9 @@ async function main() {
 
   console.log("Creating users/organization...");
   const [organizer1, organizer2, organizer3] = await Promise.all([
-    prisma.user.create({ data: { email: "org1@example.com", firstName: "Alex",   lastName: "Smith",  role: "organizer" } }),
-    prisma.user.create({ data: { email: "org2@example.com", firstName: "Morgan", lastName: "Chen",   role: "organizer" } }),
-    prisma.user.create({ data: { email: "org3@example.com", firstName: "Jamie",  lastName: "Lopez",  role: "organizer" } }),
+    prisma.user.create({ data: { email: "org1@example.com", firstName: "Alex",   lastName: "Smith",  role: "organizer", organizerStatus: "pending" } }),
+    prisma.user.create({ data: { email: "org2@example.com", firstName: "Morgan", lastName: "Chen",   role: "organizer", organizerStatus: "pending" } }),
+    prisma.user.create({ data: { email: "org3@example.com", firstName: "Jamie",  lastName: "Lopez",  role: "organizer", organizerStatus: "pending" } }),
   ]);
 
   const [student1, student2, student3, student4, admin1] = await Promise.all([
@@ -32,8 +32,6 @@ async function main() {
       description: "Computer science society",
     },
   });
-
-  // Link organizers to the organization
   await prisma.user.update({
     where: { id: organizer1.id },
     data: { organizationId: organization.id },
