@@ -77,11 +77,13 @@ model Event {
   updatedAt DateTime @updatedAt
   moderationStatus ModerationStatus @default(pending)
   moderationReason String?
+  category String?
 
   @@index([type])
   @@index([startsAt])
   @@index([location])
   @@index([moderationStatus])
+  @@index([category])
 }
 
 model Ticket {

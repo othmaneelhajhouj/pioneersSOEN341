@@ -9,8 +9,8 @@ const { validateEventData, wantsJson } = require('../utils/validation');
 const { MESSAGES, DEFAULTS } = require('../utils/constants');
 
 /**
- * GET /events - List all published events (student view)
- */
+ * OLD GET /events - List all published events (student view)
+ 
 const event_index_student = async (req, res) => {
   try {
     const events = await prisma.event.findMany({
@@ -27,6 +27,139 @@ const event_index_student = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch events' });
   }
 };
+*/
+
+/**
+ * Get /events - List & filter all published events (student view) w/ pagination logic
+ */
+const event_index_student = async (req,res) => {
+  try {
+
+     //check if page/limit value parsed correctly
+    const toInt = (v, def, min, max) => {
+      const n = parseInt(v, 10);
+      if(Number.isNaN(n)) return def;
+      return Math.min(Math.max(n, min), max);
+    };
+
+    //check if time value parsed correctly
+    const toDate = (v) => { 
+      if(!v) return null;
+      const d = new Date(v);
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
+
+    const ALLOWED_SORT = new Set(['startsAt', 'createdAt', 'title']);
+    const ALLOWED_ORDER = new Set(['asc', 'desc']);
+
+    //get query parameters
+    const from = toDate(req.query.from);
+    const to = toDate(req.query.to);
+    const category = (req.query.category || '').trim() || null;
+    const org = (req.query.org ||'').trim() || null;
+    const search = (req.query.search || '').trim() || null;
+    const page = toInt(req.query.page, 1, 1, 1000000);
+    const limit = toInt(req.query.limit, 20, 1, 100);
+    const sort = ALLOWED_SORT.has(req.query.sort) ? req.query.sort : 'startsAt';
+    const order = ALLOWED_ORDER.has(req.query.order) ? req.query.order : 'asc';
+
+
+    //prisma where only fills a filter if its corresponding query param exists. default filter: published = true. prevents filtering category: null etc
+
+    /**@type {(import('generated-prisma/client')).Prisma.EventWhereInput}*/
+    const where = {
+
+      //default
+      published: true,
+
+      //Date filters
+      ...(from || to 
+        ? {
+            startsAt: {
+              ...(from ? {gte: from} : {}),
+              ...(to ? {ite: to} : {}),
+            },
+        }
+      : {}),
+
+      //Category filter
+      ...(category ? {category} : {}),
+
+      //Search filters for title and description
+      ...(search 
+        ? {
+          OR: [
+            {title: {contains: search}},
+            {description: {contains: search}},
+          ],
+        }
+      : {}),
+
+      //Organization filter (via organizer -> organizerId)
+      ...(org
+        ? {
+          organizer: {
+            organizationId: org,
+          },
+        }
+      : {}),
+
+    };
+
+    //calculate pagination offsets
+    const skip = (page - 1)*limit;
+    const take = limit;
+
+    //get sorting order
+    const orderBy = {[sort]: order};
+
+    //run count and paged queries
+    const [total, events] = await Promise.all([
+      prisma.event.count({where}),
+      prisma.event.findMany({
+        where,
+        orderBy,
+        skip,
+        take,
+        include: {
+          organizer: {
+            select: {id: true, firstName: true, lastName: true, organizationId: true},
+          },
+          _count: {select: {tickets: true}},
+        },
+      }),
+    ]);
+
+    //Paginatino metadata
+    const meta = {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total/limit),
+      sort,
+      order,
+      filters: {from, to, category, org, search},
+    };
+
+
+    //return html by default, json if requested
+    const {wantsJson} = require('../utils/validation');
+    if(wantsJson(req)) {
+      return res.json({date: events, meta});
+    }
+
+    //pass meta so the view shows filter state
+    return res.render('student/index', {events, meta});
+  } catch (error) {
+    console.error('Error fetching events with filters:', error);
+    return res.status(500).json({error: 'Failed to fetch events'});
+  }
+}
+
+/**
+ * GET /events/:id/ics — Download an ICS calendar file for a published event
+ */
+
 
 /**
  * GET /events/:id - Get details of a specific published event (student view)
