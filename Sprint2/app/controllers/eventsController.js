@@ -159,7 +159,99 @@ const event_index_student = async (req,res) => {
 /**
  * GET /events/:id/ics — Download an ICS calendar file for a published event
  */
+const event_ics = async (req, res) => {
+  try {
 
+    //load published event
+    const ev = await prisma.event.findFirst({
+      where: {id: req.params.id, published: true},
+      select: {
+        id:true,
+        title:true,
+        description:true,
+        startsAt: true,
+        endsAt: true,
+        location: true,
+      },
+    });
+
+
+    //throws 400 if event not loaded (not found or not published)
+    if(!ev){
+      return res.status(404).json({error: 'Event not found or not published.'});
+    }
+
+    //convert JS date to ICS format (UTC)
+    const toICSDate = (d) => {
+      const pad = (n) => String(n).padStart(2, '0'); //makes sure all numbers n are 2 digits
+      const dt = new Date(d);
+      return (
+        dt.getUTCFullYear().toString() + 
+        pad(dt.getUTCMonth() + 1) +
+        pad(dt.getUTCDate()) + 'T' + 
+        pad(dt.getUTCHours()) + 
+        pad(dt.getUTCMinutes()) +
+        pad(dt.getUTCSeconds()) + 'Z' //Z: ICS UTC flag
+      );     
+    };
+
+    //escape special characters for ics safe text
+    const escapeICSText = (s) =>
+        String(s ?? '')
+          .replace(/\\/g, '\\\\')
+          .replace(/;/g, '\\;')
+          .replace(/,/g, '\\')
+          .replace(/\r?\n/g, '\\n');
+
+    //ics fields
+    const uid = `${ev.id}@pioneers.local`; //event id
+    const dtstamp = toICSDate(new Date()); //time of ics gen
+    const dtstart = toICSDate(ev.startsAt); //event start UTC
+    const dtend = toICSDate(ev.endsAt); //event end UTC
+
+    const baseUrl = `${req.protocol}://${req.get('host')}`; //base app url
+    const eventUrl = `${baseUrl}/events/${ev.id}`; //event url
+
+    //construct ics file's lines
+    const lines = [
+      'BEGIN:VCALENDAR',
+
+      'VERSION:2.0',
+      'PRODID:-//Pioneers//Event Manager//EN',
+      'CALSCALE:GREGORIAN',
+
+      'BEGIN:VEVENT',
+      `UID:${uid}`,
+      `DTSTAMP:${dtstamp}`,
+      `DTSTART:${dtstart}`,
+      `DTEND:${dtend}`,
+      `SUMMARY:${escapeICSText(ev.title)}`,
+      `DESCRIPTION:${escapeICSText(ev.description || '')}`,
+      `LOCATION:${escapeICSText(ev.location || '')}`,
+      `URL:${eventUrl}`,
+      'END:VEVENT',
+
+      'END:VCALENDAR'
+    ];
+    const ics = lines.join('\r\n');
+
+    // build filename w/o special characters from event title
+    const safeTitle = (ev.title || 'event')
+      .replace(/[^\w\-]+/g, '')
+      .trim()
+      .replace(/\s+/g, '-')
+      .toLowerCase();
+    const filename = `${safeTitle || 'event'}.ics`;
+
+    //send file as download
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.status(200).send(ics);
+  } catch (error) {
+    console.error('Error generating ICS:', error);
+    return res.status(500).json({error: 'Failed to generate calendar file.'});
+  }
+};
 
 /**
  * GET /events/:id - Get details of a specific published event (student view)
@@ -470,5 +562,6 @@ module.exports = {
   event_create,
   event_delete,
   event_publish,
-  event_unpublish
+  event_unpublish,
+  event_ics
 };
