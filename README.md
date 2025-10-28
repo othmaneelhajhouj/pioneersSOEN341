@@ -38,8 +38,11 @@ This is a university campus events & ticketing web application designed to enabl
 ## Languages & Technologies
 - JavaScript
 - TypeScript
+- CSS
+- EJS
 - Node.js (backend)
 - Bootstrap (frontend)
 - Prisma (ORM)
 - SQLite (database)
+- QRCode, multer, Jimp, jsQR (QR code treatment)
     
