@@ -15,11 +15,12 @@ const QRCode = require('qrcode');
 const {adminOrganizers} = require("./dist/routes/adminOrganizers");
 const {adminEvents} = require('./dist/routes/adminEvents');
 const {adminAnalytics} = require('./dist/routes/adminAnalytics');
-const { adminAnalyticsTrends } = require('./dist/routes/adminAnalyticsTrends');
-const { adminRoleManagement } = require('./dist/routes/adminRoleManagement');
-const { adminOrganizations } = require('./dist/routes/adminOrganizations');
+const {adminAnalyticsTrends} = require('./dist/routes/adminAnalyticsTrends');
+const {adminRoleManagement} = require('./dist/routes/adminRoleManagement');
+const {adminOrganizations} = require('./dist/routes/adminOrganizations');
+const {tickets} = require('./dist/routes/tickets');
 
-const { SERVER_PORT } = require('./utils/constants');
+const {SERVER_PORT} = require('./utils/constants');
 const app = express();
 
 // ==================== MIDDLEWARE ====================
@@ -27,7 +28,7 @@ const app = express();
 app.use(express.static(path.join(__dirname, "public")));
 
 // Parse URL-encoded form data (from HTML forms)
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({extended: true}));
 
 // Parse JSON request bodies (from API calls)
 app.use(express.json());
@@ -41,7 +42,7 @@ app.set("views", path.join(__dirname, "views"));
 
 //Temp auth to pass middleware (adminOnly for now), replace with real auth later
 app.use((req, _res, next) => {
-    req.user = {id: 'admin-1', role: 'admin', organizerStatus:'approved'};
+    req.user = {id: 'ar9rhl9z9bsou20zh63h6b2j', role: 'student'};
     next();
 });
 
@@ -70,6 +71,9 @@ app.use('/admin', adminRoleManagement);
 
 //mount compiled adminOrganizations router
 app.use('/admin', adminOrganizations);
+
+//mount compiled tickets router
+app.use('/', tickets);
 
 //endpoint to check server health
 app.get('/health', (_req, res) => res.json({ok: true}));
