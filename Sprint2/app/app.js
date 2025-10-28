@@ -19,6 +19,7 @@ const {adminAnalyticsTrends} = require('./dist/routes/adminAnalyticsTrends');
 const {adminRoleManagement} = require('./dist/routes/adminRoleManagement');
 const {adminOrganizations} = require('./dist/routes/adminOrganizations');
 const {tickets} = require('./dist/routes/tickets');
+const {organizerScan} = require('./dist/routes/organizerScan');
 
 const {SERVER_PORT} = require('./utils/constants');
 const app = express();
@@ -42,7 +43,7 @@ app.set("views", path.join(__dirname, "views"));
 
 //Temp auth to pass middleware (adminOnly for now), replace with real auth later
 app.use((req, _res, next) => {
-    req.user = {id: 'ar9rhl9z9bsou20zh63h6b2j', role: 'student'};
+    req.user = {id: 'agezl65e1mhg8it7qt7bft5f', role: 'admin'};
     next();
 });
 
@@ -74,6 +75,9 @@ app.use('/admin', adminOrganizations);
 
 //mount compiled tickets router
 app.use('/', tickets);
+
+//mount compiled organizerScan router
+app.use('/', organizerScan);
 
 //endpoint to check server health
 app.get('/health', (_req, res) => res.json({ok: true}));
