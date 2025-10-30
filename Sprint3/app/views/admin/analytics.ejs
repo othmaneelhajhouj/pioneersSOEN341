@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Analytics Trends - Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <%- include('../partials/styles') %>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 30px;
+        }
+        .date-range-picker {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+        .date-range-picker .field-group {
+            flex: 1;
+            min-width: 180px;
+        }
+    </style>
+</head>
+<body>
+<%
+const crumbs = [{label:'Admin', href:'/admin/dashboard'},{label:'Analytics'}];
+const heroTools = `
+  <div class="filters-shell">
+    <div class="filters-shell__row filters-shell__row--controls">
+      <select class="select filters-bar__select" id="bucketFilter">
+        <option value="day">Daily</option>
+        <option value="week">Weekly</option>
+      </select>
+      <button class="btn ghost" id="resetDatesBtn" type="button">
+        <i class="fa-solid fa-calendar"></i> Last 30 Days
+      </button>
+      <button class="btn secondary" id="refreshBtn" type="button">
+        <i class="fa-solid fa-arrows-rotate"></i> Refresh
+      </button>
+    </div>
+  </div>`;
+%>
+<%- include('../partials/nav', { active: 'admin:analytics', injectStyles: false, brand: 'Admin Portal', crumbs }) %>
+<%- include('../partials/hero', { title: 'Analytics Trends', subtitle: 'Track platform activity over time', heroTools }) %>
+
+<main class="container" style="padding-bottom:70px;">
+
+    <!-- Date Range Selector -->
+    <div class="section-title u-section-title">Date Range</div>
+    <div class="row-card" style="padding:20px">
+        <form class="date-range-picker" id="dateRangeForm">
+            <div class="field-group">
+                <label class="label" for="fromDate">From Date</label>
+                <input class="field" id="fromDate" type="date" required />
+            </div>
+            <div class="field-group">
+                <label class="label" for="toDate">To Date</label>
+                <input class="field" id="toDate" type="date" required />
+            </div>
+            <button type="submit" class="btn secondary">
+                <i class="fa-solid fa-magnifying-glass"></i> Apply
+            </button>
+        </form>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="section-title u-section-title">Summary</div>
+    <section class="insights">
+        <article class="insight-card accent" aria-labelledby="totalEvents">
+            <div class="insight-icon" aria-hidden="true"><i class="fa-solid fa-calendar-plus"></i></div>
+            <div>
+                <div class="insight-label" id="totalEvents">Events Created</div>
+                <div class="insight-value" id="summaryEventsCreated">-</div>
+                <div class="insight-helper" id="summaryEventsHelper">Loading...</div>
+            </div>
+        </article>
+
+        <article class="insight-card" aria-labelledby="totalTickets">
+            <div class="insight-icon" aria-hidden="true"><i class="fa-solid fa-ticket"></i></div>
+            <div>
+                <div class="insight-label" id="totalTickets">Tickets Issued</div>
+                <div class="insight-value" id="summaryTicketsIssued">-</div>
+                <div class="insight-helper" id="summaryTicketsHelper">Loading...</div>
+            </div>
+        </article>
+
+        <article class="insight-card" aria-labelledby="totalUsed">
+            <div class="insight-icon" aria-hidden="true"><i class="fa-solid fa-check-circle"></i></div>
+            <div>
+                <div class="insight-label" id="totalUsed">Tickets Used</div>
+                <div class="insight-value" id="summaryTicketsUsed">-</div>
+                <div class="insight-helper" id="summaryUsedHelper">Loading...</div>
+            </div>
+        </article>
+    </section>
+
+    <!-- Charts -->
+    <div class="section-title u-section-title">Events Created Over Time</div>
+    <div class="row-card" style="padding:24px">
+        <div class="chart-container">
+            <canvas id="eventsChart"></canvas>
+        </div>
+    </div>
+
+    <div class="section-title u-section-title">Ticket Activity</div>
+    <div class="row-card" style="padding:24px">
+        <div class="chart-container">
+            <canvas id="ticketsChart"></canvas>
+        </div>
+    </div>
+
+    <div class="section-title u-section-title">Ticket Redemption Rate</div>
+    <div class="row-card" style="padding:24px">
+        <div class="chart-container">
+            <canvas id="redemptionChart"></canvas>
+        </div>
+    </div>
+</main>
+
+<div class="toast" id="toast"></div>
+<%- include('../partials/footer') %>
+
+<script>
+    let eventsChart, ticketsChart, redemptionChart;
+    let currentBucket = 'day';
+
+    // Chart.js default configuration
+    Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
+    Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+    Chart.defaults.font.family = 'Inter, system-ui, -apple-system, sans-serif';
+
+    // Initialize charts
+    function initCharts() {
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        };
+
+        // Events Created Chart
+        const eventsCtx = document.getElementById('eventsChart').getContext('2d');
+        eventsChart = new Chart(eventsCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Events Created',
+                    data: [],
+                    borderColor: 'rgb(209, 180, 84)',
+                    backgroundColor: 'rgba(209, 180, 84, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 2
+                }]
+            },
+            options: chartOptions
+        });
+
+        // Tickets Chart (Issued vs Used)
+        const ticketsCtx = document.getElementById('ticketsChart').getContext('2d');
+        ticketsChart = new Chart(ticketsCtx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Tickets Issued',
+                        data: [],
+                        backgroundColor: 'rgba(188, 189, 115, 0.7)',
+                        borderColor: 'rgb(188, 189, 115)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Tickets Used',
+                        data: [],
+                        backgroundColor: 'rgba(209, 180, 84, 0.7)',
+                        borderColor: 'rgb(209, 180, 84)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: chartOptions
+        });
+
+        // Redemption Rate Chart
+        const redemptionCtx = document.getElementById('redemptionChart').getContext('2d');
+        redemptionChart = new Chart(redemptionCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Redemption Rate (%)',
+                    data: [],
+                    borderColor: 'rgb(188, 189, 115)',
+                    backgroundColor: 'rgba(188, 189, 115, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                ...chartOptions,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Fetch trends data
+    async function fetchTrends(from, to, buckets) {
+        try {
+            const url = new URL('/admin/analytics/trends', window.location.origin);
+            url.searchParams.set('from', from.toISOString());
+            url.searchParams.set('to', to.toISOString());
+            url.searchParams.set('buckets', buckets);
+
+            const response = await fetch(url);
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to fetch trends');
+            }
+
+            updateCharts(result);
+            updateSummary(result);
+
+        } catch (error) {
+            console.error('Error fetching trends:', error);
+            showToast('Failed to load analytics data', 'error');
+        }
+    }
+
+    // Update charts with data
+    function updateCharts(data) {
+        const { eventsCreated, ticketsIssued, ticketsUsed } = data;
+
+        // Combine all periods to get complete timeline
+        const allPeriods = new Set([
+            ...eventsCreated.map(d => d.period),
+            ...ticketsIssued.map(d => d.period),
+            ...ticketsUsed.map(d => d.period)
+        ]);
+        const periods = Array.from(allPeriods).sort();
+
+        // Helper to get count for a period
+        const getCount = (arr, period) => {
+            const item = arr.find(d => d.period === period);
+            return item ? item.count : 0;
+        };
+
+        // Update Events Chart
+        eventsChart.data.labels = periods;
+        eventsChart.data.datasets[0].data = periods.map(p => getCount(eventsCreated, p));
+        eventsChart.update();
+
+        // Update Tickets Chart
+        ticketsChart.data.labels = periods;
+        ticketsChart.data.datasets[0].data = periods.map(p => getCount(ticketsIssued, p));
+        ticketsChart.data.datasets[1].data = periods.map(p => getCount(ticketsUsed, p));
+        ticketsChart.update();
+
+        // Update Redemption Rate Chart
+        const redemptionRates = periods.map(p => {
+            const issued = getCount(ticketsIssued, p);
+            const used = getCount(ticketsUsed, p);
+            return issued > 0 ? Math.round((used / issued) * 100) : 0;
+        });
+        redemptionChart.data.labels = periods;
+        redemptionChart.data.datasets[0].data = redemptionRates;
+        redemptionChart.update();
+    }
+
+    // Update summary cards
+    function updateSummary(data) {
+        const { eventsCreated, ticketsIssued, ticketsUsed, range } = data;
+
+        const totalEvents = eventsCreated.reduce((sum, d) => sum + d.count, 0);
+        const totalIssued = ticketsIssued.reduce((sum, d) => sum + d.count, 0);
+        const totalUsed = ticketsUsed.reduce((sum, d) => sum + d.count, 0);
+
+        const redemptionRate = totalIssued > 0 ? Math.round((totalUsed / totalIssued) * 100) : 0;
+
+        document.getElementById('summaryEventsCreated').textContent = totalEvents;
+        document.getElementById('summaryTicketsIssued').textContent = totalIssued;
+        document.getElementById('summaryTicketsUsed').textContent = totalUsed;
+
+        const fromDate = new Date(range.from).toLocaleDateString();
+        const toDate = new Date(range.to).toLocaleDateString();
+
+        document.getElementById('summaryEventsHelper').textContent = `${fromDate} - ${toDate}`;
+        document.getElementById('summaryTicketsHelper').textContent = `${redemptionRate}% redemption rate`;
+        document.getElementById('summaryUsedHelper').textContent = `${totalIssued - totalUsed} unused`;
+    }
+
+    // Date range form submit
+    document.getElementById('dateRangeForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const from = new Date(document.getElementById('fromDate').value);
+        const to = new Date(document.getElementById('toDate').value);
+
+        if (from > to) {
+            showToast('From date must be before To date', 'error');
+            return;
+        }
+
+        fetchTrends(from, to, currentBucket);
+    });
+
+    // Bucket filter change
+    document.getElementById('bucketFilter').addEventListener('change', (e) => {
+        currentBucket = e.target.value;
+        const from = new Date(document.getElementById('fromDate').value);
+        const to = new Date(document.getElementById('toDate').value);
+        fetchTrends(from, to, currentBucket);
+    });
+
+    // Reset to last 30 days
+    document.getElementById('resetDatesBtn').addEventListener('click', () => {
+        const to = new Date();
+        const from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+        document.getElementById('fromDate').value = from.toISOString().split('T')[0];
+        document.getElementById('toDate').value = to.toISOString().split('T')[0];
+
+        fetchTrends(from, to, currentBucket);
+    });
+
+    // Refresh button
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+        const from = new Date(document.getElementById('fromDate').value);
+        const to = new Date(document.getElementById('toDate').value);
+        fetchTrends(from, to, currentBucket);
+    });
+
+    // Show toast notification
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        // Set default dates (last 30 days)
+        const to = new Date();
+        const from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+        document.getElementById('fromDate').value = from.toISOString().split('T')[0];
+        document.getElementById('toDate').value = to.toISOString().split('T')[0];
+
+        // Initialize charts
+        initCharts();
+
+        // Load initial data
+        fetchTrends(from, to, currentBucket);
+    });
+</script>
+</body>
+</html>

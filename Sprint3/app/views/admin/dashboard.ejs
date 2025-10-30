@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Admin Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <%- include('../partials/styles') %>
+</head>
+<body>
+<%
+const crumbs = [{label:'Admin', href:'/admin/dashboard'},{label:'Dashboard'}];
+%>
+<%- include('../partials/nav', { active: 'admin:dashboard', injectStyles: false, brand: 'Admin Portal', crumbs }) %>
+<%- include('../partials/hero', { title: 'Admin Dashboard', subtitle: 'Monitor platform activity and manage resources', heroTools: '' }) %>
+
+<main class="container" style="padding-bottom:70px;">
+    <div class="section-title u-section-title">Platform Analytics</div>
+    <section class="insights">
+        <article class="insight-card accent" aria-labelledby="metricEventsTotal">
+            <div class="insight-icon" aria-hidden="true"><i class="fa-solid fa-calendar-days"></i></div>
+            <div>
+                <div class="insight-label" id="metricEventsTotal">Total Events</div>
+                <div class="insight-value" id="insightEventsTotal">-</div>
+                <div class="insight-helper" id="insightPublishedHelper">Loading...</div>
+            </div>
+        </article>
+
+        <article class="insight-card" aria-labelledby="metricEventsPublished">
+            <div class="insight-icon" aria-hidden="true"><i class="fa-solid fa-signal"></i></div>
+            <div>
+                <div class="insight-label" id="metricEventsPublished">Published Events</div>
+                <div class="insight-value" id="insightEventsPublished">-</div>
+                <div class="insight-helper">Live on the platform</div>
+            </div>
+        </article>
+
+        <article class="insight-card" aria-labelledby="metricTicketsIssued">
+            <div class="insight-icon" aria-hidden="true"><i class="fa-solid fa-ticket"></i></div>
+            <div>
+                <div class="insight-label" id="metricTicketsIssued">Tickets Issued</div>
+                <div class="insight-value" id="insightTicketsIssued">-</div>
+                <div class="insight-helper" id="insightTicketsUsedHelper">Loading...</div>
+            </div>
+        </article>
+
+        <article class="insight-card" aria-labelledby="metricTicketsUsed">
+            <div class="insight-icon" aria-hidden="true"><i class="fa-solid fa-check-circle"></i></div>
+            <div>
+                <div class="insight-label" id="metricTicketsUsed">Tickets Used</div>
+                <div class="insight-value" id="insightTicketsUsed">-</div>
+                <div class="insight-helper">Redeemed tickets</div>
+            </div>
+        </article>
+
+        <article class="insight-card" aria-labelledby="metricParticipants">
+            <div class="insight-icon" aria-hidden="true"><i class="fa-solid fa-users"></i></div>
+            <div>
+                <div class="insight-label" id="metricParticipants">Unique Participants</div>
+                <div class="insight-value" id="insightParticipants">-</div>
+                <div class="insight-helper">Active users</div>
+            </div>
+        </article>
+    </section>
+
+    <div class="section-title u-section-title">Quick Actions</div>
+    <section style="display:grid; gap:14px">
+        <article class="row-card">
+            <div class="event-header">
+                <div class="o-title">Event Management</div>
+                <span class="status-chip">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span class="status-label">Moderation</span>
+        </span>
+            </div>
+            <div class="event-meta">
+                <span><i class="fa-solid fa-list-check"></i> Review pending events</span>
+                <span><i class="fa-solid fa-eye"></i> Monitor published content</span>
+            </div>
+            <div class="grid-meta">
+                <div class="event-extra">
+                    <div class="o-sub">Approve, reject, or unpublish events to maintain platform quality</div>
+                </div>
+                <div class="event-type">
+                    <div class="helper">Content moderation tools</div>
+                </div>
+                <div class="event-controls"></div>
+                <div class="o-actions">
+                    <a class="btn secondary" href="/admin/events-manage">
+                        <i class="fa-solid fa-calendar-days"></i> Manage Events
+                    </a>
+                </div>
+            </div>
+        </article>
+
+        <article class="row-card">
+            <div class="event-header">
+                <div class="o-title">Organizer Requests</div>
+                <span class="status-chip">
+          <i class="fa-solid fa-user-shield"></i>
+          <span class="status-label">Approvals</span>
+        </span>
+            </div>
+            <div class="event-meta">
+                <span><i class="fa-solid fa-user-plus"></i> Review organizer applications</span>
+                <span><i class="fa-solid fa-ban"></i> Manage access and permissions</span>
+            </div>
+            <div class="grid-meta">
+                <div class="event-extra">
+                    <div class="o-sub">Approve or deny organizer applications and manage existing organizers</div>
+                </div>
+                <div class="event-type">
+                    <div class="helper">User permission management</div>
+                </div>
+                <div class="event-controls"></div>
+                <div class="o-actions">
+                    <a class="btn secondary" href="/admin/organizers-manage">
+                        <i class="fa-solid fa-user-tie"></i> Manage Organizers
+                    </a>
+                </div>
+            </div>
+        </article>
+
+        <article class="row-card">
+            <div class="event-header">
+                <div class="o-title">Organizations</div>
+                <span class="status-chip">
+          <i class="fa-solid fa-building"></i>
+          <span class="status-label">Admin</span>
+        </span>
+            </div>
+            <div class="event-meta">
+                <span><i class="fa-solid fa-plus"></i> Create new organizations</span>
+                <span><i class="fa-solid fa-pen"></i> Edit organization details</span>
+            </div>
+            <div class="grid-meta">
+                <div class="event-extra">
+                    <div class="o-sub">Create, update, and delete organizations on the platform</div>
+                </div>
+                <div class="event-type">
+                    <div class="helper">Organization administration</div>
+                </div>
+                <div class="event-controls"></div>
+                <div class="o-actions">
+                    <a class="btn secondary" href="/admin/organizations-manage">
+                        <i class="fa-solid fa-sitemap"></i> Manage Organizations
+                    </a>
+                </div>
+            </div>
+        </article>
+    </section>
+</main>
+
+<div class="toast" id="toast"></div>
+<%- include('../partials/footer') %>
+
+<script>
+    // Fetch analytics data
+    fetch('/admin/analytics')
+        .then(res => {
+            if (!res.ok) throw new Error('Failed to fetch analytics');
+            return res.json();
+        })
+        .then(data => {
+            console.log('Analytics data:', data);
+
+            // Update metrics
+            document.getElementById('insightEventsTotal').textContent = data.eventsTotal || 0;
+            document.getElementById('insightEventsPublished').textContent = data.eventsPublished || 0;
+            document.getElementById('insightTicketsIssued').textContent = data.ticketsIssued || 0;
+            document.getElementById('insightTicketsUsed').textContent = data.ticketsUsed || 0;
+            document.getElementById('insightParticipants').textContent = data.participantsUnique || 0;
+
+            // Update helpers
+            const draftCount = data.eventsTotal - data.eventsPublished;
+            document.getElementById('insightPublishedHelper').textContent =
+                `${data.eventsPublished} published, ${draftCount} draft${draftCount === 1 ? '' : 's'}`;
+
+            const usagePercent = data.ticketsIssued > 0
+                ? Math.round((data.ticketsUsed / data.ticketsIssued) * 100)
+                : 0;
+            document.getElementById('insightTicketsUsedHelper').textContent =
+                `${data.ticketsUsed} used (${usagePercent}%)`;
+        })
+        .catch(err => {
+            console.error('Failed to load analytics:', err);
+            document.querySelectorAll('.insight-value').forEach(el => {
+                el.textContent = 'Error';
+            });
+
+            // Show error toast
+            const toast = document.getElementById('toast');
+            toast.textContent = 'Failed to load analytics data';
+            toast.className = 'toast error show';
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        });
+</script>
+</body>
+</html>

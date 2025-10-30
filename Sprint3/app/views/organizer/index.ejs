@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>My Events</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <%- include('../partials/styles') %>
+</head>
+<body data-organizer-id="<%= organizerId %>">
+<%
+  const filtersData = (typeof filters !== 'undefined' && filters) ? filters : { q: '', type: '', status: '', sort: 'newest' };
+  const escapeAttr = (s = '') => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const list = Array.isArray(events) ? events : [];
+  const publishedCount = list.filter(e => e.published).length;
+  const draftCount = list.length - publishedCount;
+  const ticketsSold = list.reduce((sum, e) => sum + (e._count ? e._count.tickets : 0), 0);
+  const totalCapacity = list.reduce((sum, e) => sum + (typeof e.capacity === 'number' ? e.capacity : 0), 0);
+  const utilization = totalCapacity ? Math.min(100, Math.round((ticketsSold / totalCapacity) * 100)) : 0;
+  const nowTs = Date.now();
+  const upcomingEvents = list.filter(e => e.startsAt && new Date(e.startsAt).getTime() > nowTs).sort((a,b)=> new Date(a.startsAt) - new Date(b.startsAt));
+  const nextEvent = upcomingEvents[0];
+  const nextEventDate = nextEvent ? new Date(nextEvent.startsAt) : null;
+  const crumbs = [{label:'Organizer', href:`/organizers/${organizerId}/events`},{label:'My Events'}];
+  const heroTools = `
+  <div class=\"filters-shell\">
+    <div class=\"filters-shell__row filters-shell__row--search\">
+      <div class=\"filters-bar__search\">
+        <i class=\"fa-solid fa-magnifying-glass\"></i>
+        <input class=\"field filters-shell__searchField\" type=\"search\" placeholder=\"Search title or location…\" id=\"q\" value=\"${escapeAttr(filtersData.q || '')}\" data-default=\"${escapeAttr(filtersData.q || '')}\">
+      </div>
+    </div>
+    <div class=\"filters-shell__row filters-shell__row--controls\">
+      <select class=\"select filters-bar__select\" id=\"fltType\" data-default=\"${filtersData.type || ''}\">
+        <option value=\"\" ${!filtersData.type ? 'selected' : ''}>All types</option>
+        <option value=\"free\" ${filtersData.type === 'free' ? 'selected' : ''}>Free</option>
+        <option value=\"paid\" ${filtersData.type === 'paid' ? 'selected' : ''}>Paid</option>
+      </select>
+      <select class=\"select filters-bar__select\" id=\"fltStatus\" data-default=\"${filtersData.status || ''}\">
+        <option value=\"\" ${!filtersData.status ? 'selected' : ''}>All statuses</option>
+        <option value=\"published\" ${filtersData.status === 'published' ? 'selected' : ''}>Published</option>
+        <option value=\"draft\" ${filtersData.status === 'draft' ? 'selected' : ''}>Draft</option>
+      </select>
+      <select class=\"select filters-bar__select\" id=\"fltSort\" data-default=\"${filtersData.sort || 'newest'}\">
+        <option value=\"newest\" ${filtersData.sort === 'newest' ? 'selected' : ''}>Newest first</option>
+        <option value=\"upcoming\" ${filtersData.sort === 'upcoming' ? 'selected' : ''}>Upcoming</option>
+        <option value=\"alphabetical\" ${filtersData.sort === 'alphabetical' ? 'selected' : ''}>Alphabetical</option>
+        <option value=\"capacity\" ${filtersData.sort === 'capacity' ? 'selected' : ''}>Capacity</option>
+      </select>
+      <button class=\"btn ghost filters-bar__action\" id=\"reset\" type=\"button\"><i class=\"fa-solid fa-arrows-rotate\"></i> Reset</button>
+    </div>
+  </div>`;
+%>
+<%- include('../partials/nav', { active: 'organizer:index', injectStyles: false, brand: 'Organizer', crumbs }) %>
+<%- include('../partials/hero', { title: 'My Events', subtitle: 'Publish, refine or retire events with a few taps', heroTools }) %>
+
+<main class="container" style="padding-bottom:70px;">
+  <div class="section-title u-section-title">Dashboard</div>
+  <section class="insights">
+    <article class="insight-card accent" aria-labelledby="metricLiveEvents">
+      <div class="insight-icon" aria-hidden="true"><i class="fa-solid fa-bullhorn"></i></div>
+      <div>
+        <div class="insight-label" id="metricLiveEvents">Live events</div>
+        <div class="insight-value" id="insightLiveCount"><%= publishedCount %></div>
+        <div class="insight-helper" id="insightDraftHelper"><%= draftCount %> draft<%= draftCount === 1 ? '' : 's' %> ready to go</div>
+      </div>
+    </article>
+    <article class="insight-card" aria-labelledby="metricTickets">
+      <div class="insight-icon" aria-hidden="true"><i class="fa-solid fa-ticket"></i></div>
+      <div>
+        <div class="insight-label" id="metricTickets">Tickets sold</div>
+        <div class="insight-value" id="insightTickets"><%= ticketsSold %></div>
+        <div class="insight-helper" id="insightCapacityHelper"><%= totalCapacity ? `${utilization}% of ${totalCapacity} seats` : 'Add capacity to unlock stats' %></div>
+      </div>
+    </article>
+    <article class="insight-card" aria-labelledby="metricNext">
+      <div class="insight-icon" aria-hidden="true"><i class="fa-solid fa-calendar-days"></i></div>
+      <div>
+        <div class="insight-label" id="metricNext">Next event</div>
+        <div class="insight-value" id="insightNextTitle"><%= nextEvent ? nextEvent.title : 'Nothing scheduled' %></div>
+        <div class="insight-helper" id="insightNextHelper">
+          <% if (nextEventDate) { %>
+            <%= nextEventDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) %> · <%= nextEventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %>
+          <% } else { %>
+            Plan your next release
+          <% } %>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <div class="section-title" style="margin-top:26px;margin-bottom:10px;">Your events</div>
+  <% if (!list.length) { %>
+    <div class="row-card" style="justify-content:center; text-align:center; padding:26px">
+      <div class="o-title" style="margin-bottom:8px">No events yet</div>
+      <div class="o-sub">Use <b>New Event</b> to launch your first experience in minutes.</div>
+    </div>
+  <% } else { %>
+    <section class="row-grid" style="display:grid; gap:14px" data-events-grid>
+      <% list.forEach(e => { const start = e.startsAt ? new Date(e.startsAt) : null; const end = e.endsAt ? new Date(e.endsAt) : null; const created = e.createdAt ? new Date(e.createdAt) : null; const startTs = start ? start.getTime() : NaN; const endTs = end ? end.getTime() : NaN; const now = Date.now(); const sold = e._count ? e._count.tickets : 0; const capacity = typeof e.capacity === 'number' ? e.capacity : 0; const remaining = capacity - sold; const fill = capacity ? Math.min(100, Math.round((sold / capacity) * 100)) : 0; let timelineClass=''; let timelineText='Schedule TBD'; if(!Number.isNaN(startTs)&&!Number.isNaN(endTs)){ if(now < startTs){ const diffDays=Math.floor((startTs-now)/(24*60*60*1000)); if(diffDays <= 0){ timelineText='Starts later today'; } else if(diffDays===1){ timelineText='Starts tomorrow'; } else { timelineText=`Starts in ${diffDays} days`; } timelineClass='status-upcoming'; } else if(now>=startTs && now<=endTs){ timelineText='Happening now'; timelineClass='status-live'; } else { timelineText='Completed'; timelineClass='status-ended'; } } else if(!Number.isNaN(startTs)){ timelineText=start.toLocaleDateString(); } %>
+      <article class="row-card event-card" data-event-card
+        data-event-id="<%= e.id %>"
+        data-organizer="<%= organizerId %>"
+        data-title="<%= escapeAttr(e.title) %>"
+        data-location="<%= escapeAttr(e.location) %>"
+        data-type="<%= e.type %>"
+        data-published="<%= e.published ? 'true' : 'false' %>"
+        data-starts-at="<%= Number.isNaN(startTs) ? '' : startTs %>"
+        data-ends-at="<%= Number.isNaN(endTs) ? '' : endTs %>"
+        data-created-at="<%= created ? created.getTime() : '' %>"
+        data-capacity="<%= capacity %>"
+        data-sold="<%= sold %>"
+        data-price="<%= typeof e.price === 'number' ? e.price : '' %>">
+        <div class="event-header">
+          <div class="o-title"><%= e.title %></div>
+          <span class="status-chip <%= e.published ? 'live' : '' %>">
+            <i class="fa-solid <%= e.published ? 'fa-signal' : 'fa-pen-to-square' %>"></i>
+            <span class="status-label"><%= e.published ? 'Published' : 'Draft' %></span>
+          </span>
+        </div>
+        <div class="event-meta">
+          <% if (start) { %><span><i class="fa-regular fa-clock"></i> <%= start.toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) %></span><% } %>
+          <% if (end) { %><span><i class="fa-solid fa-hourglass-half"></i> Ends <%= end.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) %></span><% } %>
+          <span><i class="fa-solid fa-location-dot"></i> <%= e.location %></span>
+          <span class="timeline-tag <%= timelineClass %>"><i class="fa-solid fa-bolt"></i> <%= timelineText %></span>
+        </div>
+        <div class="grid-meta">
+          <div class="event-extra">
+            <div class="o-sub">Capacity <b><%= capacity %></b> · Tickets sold <b><%= sold %></b> · Seats left <b><%= Math.max(remaining,0) %></b></div>
+            <div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= fill %>">
+              <div class="meter__fill" style="--fill:<%= fill %>%;"></div>
+            </div>
+            <div class="helper meter-helper">
+              <span>Utilization <b><%= fill %>%</b></span>
+              <span>Revenue <b><%= e.type === 'paid' && typeof e.price === 'number' ? '$' + ((e.price/100) * sold).toFixed(2) : '—' %></b></span>
+            </div>
+          </div>
+          <div class="event-type">
+            <% if (e.type === 'paid' && typeof e.price === 'number') { %>
+              <span class="chip paid"><i class="fa-solid fa-dollar-sign"></i> <%= (e.price/100).toFixed(2) %> per ticket</span>
+            <% } else { %>
+              <span class="chip free"><i class="fa-solid fa-ticket"></i> Free entry</span>
+            <% } %>
+            <div class="helper">Created <%= created ? created.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }) : '—' %></div>
+          </div>
+          <div class="event-controls">
+            <div class="toggle <%= e.published ? 'on' : '' %>" data-id="<%= e.id %>" role="switch" aria-checked="<%= e.published ? 'true' : 'false' %>" aria-label="Toggle publish status for <%= e.title %>">
+              <div class="knob"></div>
+              <span>Draft</span><span>Live</span>
+            </div>
+            <div class="helper">Tap to <%= e.published ? 'unpublish' : 'publish' %></div>
+          </div>
+          <div class="o-actions">
+            <a class="btn secondary" href="/organizers/<%= organizerId %>/events/<%= e.id %>"><i class="fa-solid fa-up-right-from-square"></i> View</a>
+            <button class="btn danger" type="button" data-action="delete" data-event-id="<%= e.id %>"><i class="fa-solid fa-trash"></i> Delete</button>
+          </div>
+        </div>
+      </article>
+      <% }) %>
+    </section>
+    <div class="row-card hidden" id="noMatches" style="justify-content:center; text-align:center; padding:26px">
+      <div class="o-sub">No events match your filters. Try broadening them.</div>
+    </div>
+  <% } %>
+</main>
+
+<!-- Floating Action Button -->
+<button class="btn fab" type="button" id="openCreateModal"><i class="fa-solid fa-plus"></i> New</button>
+
+<!-- Create Event Modal-->
+<div class="modal-backdrop hidden" id="newEventModal" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="modal-panel" role="document">
+    <div class="modal-header">
+      <div class="modal-title"><i class="fa-solid fa-wand-magic-sparkles"></i> New Event</div>
+      <button type="button" class="modal-close" data-close-modal aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form id="createEventForm" class="modal-body">
+      <div id="newEventErrors" class="modal-errors hidden" aria-live="assertive"></div>
+      <div class="field-group">
+        <label class="label" for="modalTitle">Title</label>
+        <input class="field" id="modalTitle" name="title" type="text" maxlength="120" required />
+      </div>
+      <div class="field-group">
+        <label class="label" for="modalDescription">Description</label>
+        <textarea class="field" id="modalDescription" name="description" rows="3" maxlength="500" required></textarea>
+      </div>
+      <div class="field-grid">
+        <div class="field-group">
+          <label class="label" for="modalLocation">Location</label>
+          <input class="field" id="modalLocation" name="location" type="text" maxlength="140" required />
+        </div>
+        <div class="field-group">
+          <label class="label" for="modalType">Type</label>
+          <select class="select" id="modalType" name="type" required>
+            <option value="free" selected>Free</option>
+            <option value="paid">Paid</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field-group">
+          <label class="label" for="modalCapacity">Capacity</label>
+          <input class="field" id="modalCapacity" name="capacity" type="number" min="0" step="1" placeholder="0" />
+        </div>
+        <div class="field-group">
+          <label class="label" for="modalPrice">Price (CAD)</label>
+          <input class="field" id="modalPrice" name="price" type="number" min="0" step="0.01" placeholder="0.00" disabled />
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field-group">
+          <label class="label" for="modalStartDate">Start Date</label>
+          <input class="field" id="modalStartDate" type="date" required />
+        </div>
+        <div class="field-group">
+          <label class="label" for="modalStartTime">Start Time</label>
+          <input class="field" id="modalStartTime" type="time" step="300" required />
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field-group">
+          <label class="label" for="modalEndDate">End Date</label>
+          <input class="field" id="modalEndDate" type="date" required />
+        </div>
+        <div class="field-group">
+          <label class="label" for="modalEndTime">End Time</label>
+          <input class="field" id="modalEndTime" type="time" step="300" required />
+        </div>
+      </div>
+      <input type="hidden" name="startsAt" id="modalStarts" />
+      <input type="hidden" name="endsAt" id="modalEnds" />
+      <div class="field-group" style="margin-top:4px;">
+        <label class="switch" for="modalPublished">
+          <input id="modalPublished" name="published" type="checkbox" />
+          <span class="track"><span class="thumb"></span></span>
+          <span>Publish immediately</span>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn ghost" data-close-modal><i class="fa-solid fa-xmark"></i> Cancel</button>
+        <button type="submit" class="btn secondary" id="createEventSubmit"><i class="fa-solid fa-paper-plane"></i> Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<%- include('../partials/footer') %>
+<script type="module" src="/js/dashboard.ui.js"></script>
+</body>
+</html>

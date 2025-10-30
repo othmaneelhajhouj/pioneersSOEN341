@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Manage Organizations - Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <%- include('../partials/styles') %>
+</head>
+<body>
+<%
+const crumbs = [{label:'Admin', href:'/admin/dashboard'},{label:'Organizations'}];
+%>
+<%- include('../partials/nav', { active: 'admin:organizations', injectStyles: false, brand: 'Admin Portal', crumbs }) %>
+<%- include('../partials/hero', { title: 'Organization Management', subtitle: 'Create and manage organizations on the platform', heroTools: '' }) %>
+
+<main class="container" style="padding-bottom:70px;">
+    <div class="u-flex-between" style="margin-bottom:16px">
+        <div class="section-title u-section-title" style="margin:0">Organizations (<span id="orgCount">0</span>)</div>
+        <button class="btn secondary" id="openCreateModal">
+            <i class="fa-solid fa-plus"></i> New Organization
+        </button>
+    </div>
+
+    <!-- Loading State -->
+    <div class="row-card" id="loadingState" style="text-align:center; padding:26px">
+        <div class="o-title">Loading organizations...</div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="row-card hidden" id="emptyState" style="text-align:center; padding:26px">
+        <div class="o-title" style="margin-bottom:8px">No organizations yet</div>
+        <div class="o-sub">Create your first organization to get started</div>
+    </div>
+
+    <!-- Organizations List -->
+    <section style="display:grid; gap:14px" id="orgsList"></section>
+
+    <!-- Load More -->
+    <div class="hidden" id="loadMoreContainer" style="margin-top:20px; text-align:center">
+        <button class="btn secondary" id="loadMoreBtn">
+            <i class="fa-solid fa-arrow-down"></i> Load More
+        </button>
+    </div>
+</main>
+
+<!-- Create Organization Modal -->
+<div class="modal-backdrop hidden" id="createModal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-panel" role="document">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa-solid fa-building"></i> New Organization</div>
+            <button type="button" class="modal-close" data-close-modal aria-label="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="createForm" class="modal-body">
+            <div id="createErrors" class="modal-errors hidden" aria-live="assertive"></div>
+            <div class="field-group">
+                <label class="label" for="createName">Organization Name</label>
+                <input class="field" id="createName" name="name" type="text" maxlength="100" required
+                       placeholder="Enter organization name..." />
+            </div>
+            <div class="field-group">
+                <label class="label" for="createDescription">Description (Optional)</label>
+                <textarea class="field" id="createDescription" name="description" rows="3" maxlength="500"
+                          placeholder="Describe the organization..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn ghost" data-close-modal>
+                    <i class="fa-solid fa-xmark"></i> Cancel
+                </button>
+                <button type="submit" class="btn secondary">
+                    <i class="fa-solid fa-plus"></i> Create Organization
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Organization Modal -->
+<div class="modal-backdrop hidden" id="editModal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-panel" role="document">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa-solid fa-pen"></i> Edit Organization</div>
+            <button type="button" class="modal-close" data-close-modal aria-label="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="editForm" class="modal-body">
+            <input type="hidden" id="editOrgId" />
+            <div id="editErrors" class="modal-errors hidden" aria-live="assertive"></div>
+            <div class="field-group">
+                <label class="label" for="editName">Organization Name</label>
+                <input class="field" id="editName" name="name" type="text" maxlength="100" required />
+            </div>
+            <div class="field-group">
+                <label class="label" for="editDescription">Description (Optional)</label>
+                <textarea class="field" id="editDescription" name="description" rows="3" maxlength="500"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn ghost" data-close-modal>
+                    <i class="fa-solid fa-xmark"></i> Cancel
+                </button>
+                <button type="submit" class="btn secondary">
+                    <i class="fa-solid fa-save"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<%- include('../partials/footer') %>
+
+<script>
+    let currentCursor = null;
+    let orgsData = [];
+
+    // Fetch organizations from API
+    async function fetchOrganizations(cursor = null, append = false) {
+        try {
+            document.getElementById('loadingState').classList.remove('hidden');
+
+            const url = new URL('/admin/organizations', window.location.origin);
+            if (cursor) url.searchParams.set('cursor', cursor);
+
+            const response = await fetch(url);
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to fetch organizations');
+            }
+
+            if (append) {
+                orgsData = [...orgsData, ...result.data];
+            } else {
+                orgsData = result.data;
+            }
+
+            currentCursor = result.nextCursor;
+            renderOrganizations();
+
+        } catch (error) {
+            console.error('Error fetching organizations:', error);
+            showToast('Failed to load organizations', 'error');
+        } finally {
+            document.getElementById('loadingState').classList.add('hidden');
+        }
+    }
+
+    // Render organizations list
+    function renderOrganizations() {
+        const container = document.getElementById('orgsList');
+        const emptyState = document.getElementById('emptyState');
+        const loadMoreContainer = document.getElementById('loadMoreContainer');
+
+        document.getElementById('orgCount').textContent = orgsData.length;
+
+        if (orgsData.length === 0) {
+            container.innerHTML = '';
+            emptyState.classList.remove('hidden');
+            loadMoreContainer.classList.add('hidden');
+            return;
+        }
+
+        emptyState.classList.add('hidden');
+
+        container.innerHTML = orgsData.map(org => {
+            const createdDate = org.createdAt ? new Date(org.createdAt) : null;
+            const updatedDate = org.updatedAt ? new Date(org.updatedAt) : null;
+
+            return `
+            <article class="row-card" data-org-id="${org.id}">
+                <div class="event-header">
+                    <div class="o-title">${escapeHtml(org.name)}</div>
+                    <span class="status-chip live">
+                        <i class="fa-solid fa-building"></i>
+                        <span class="status-label">Active</span>
+                    </span>
+                </div>
+                <div class="event-meta">
+                    ${createdDate ? `<span><i class="fa-solid fa-calendar-plus"></i> Created ${createdDate.toLocaleDateString()}</span>` : ''}
+                    ${updatedDate && updatedDate.getTime() !== createdDate?.getTime() ? `<span><i class="fa-solid fa-pen"></i> Updated ${updatedDate.toLocaleDateString()}</span>` : ''}
+                </div>
+                <div class="grid-meta">
+                    <div class="event-extra">
+                        <div class="o-sub">${org.description ? escapeHtml(org.description) : '<i>No description provided</i>'}</div>
+                    </div>
+                    <div class="event-type">
+                        <div class="helper">Organization ID</div>
+                        <div class="helper" style="font-family: monospace; font-size:11px">${org.id}</div>
+                    </div>
+                    <div class="event-controls"></div>
+                    <div class="o-actions">
+                        <button class="btn secondary" onclick="openEditModal('${org.id}')">
+                            <i class="fa-solid fa-pen"></i> Edit
+                        </button>
+                        <button class="btn danger" onclick="deleteOrganization('${org.id}')">
+                            <i class="fa-solid fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            </article>
+        `;
+        }).join('');
+
+        // Show/hide load more button
+        if (currentCursor) {
+            loadMoreContainer.classList.remove('hidden');
+        } else {
+            loadMoreContainer.classList.add('hidden');
+        }
+    }
+
+    // Open create modal
+    document.getElementById('openCreateModal').addEventListener('click', () => {
+        document.getElementById('createForm').reset();
+        document.getElementById('createErrors').classList.add('hidden');
+        document.getElementById('createModal').classList.remove('hidden');
+    });
+
+    // Create organization
+    document.getElementById('createForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = {
+            name: document.getElementById('createName').value.trim(),
+            description: document.getElementById('createDescription').value.trim() || undefined
+        };
+
+        try {
+            const response = await fetch('/admin/organizations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                if (result.error?.fieldErrors) {
+                    showFormErrors('createErrors', result.error.fieldErrors);
+                } else {
+                    throw new Error(result.error || 'Failed to create organization');
+                }
+                return;
+            }
+
+            showToast('Organization created successfully', 'success');
+            document.getElementById('createModal').classList.add('hidden');
+            currentCursor = null;
+            fetchOrganizations();
+        } catch (error) {
+            console.error('Error creating organization:', error);
+            showToast(error.message, 'error');
+        }
+    });
+
+    // Open edit modal
+    function openEditModal(orgId) {
+        const org = orgsData.find(o => o.id === orgId);
+        if (!org) return;
+
+        document.getElementById('editOrgId').value = org.id;
+        document.getElementById('editName').value = org.name;
+        document.getElementById('editDescription').value = org.description || '';
+        document.getElementById('editErrors').classList.add('hidden');
+        document.getElementById('editModal').classList.remove('hidden');
+    }
+
+    // Update organization
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const orgId = document.getElementById('editOrgId').value;
+        const formData = {
+            name: document.getElementById('editName').value.trim(),
+            description: document.getElementById('editDescription').value.trim() || undefined
+        };
+
+        try {
+            const response = await fetch(`/admin/organizations/${orgId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                if (result.error?.fieldErrors) {
+                    showFormErrors('editErrors', result.error.fieldErrors);
+                } else {
+                    throw new Error(result.error || 'Failed to update organization');
+                }
+                return;
+            }
+
+            showToast('Organization updated successfully', 'success');
+            document.getElementById('editModal').classList.add('hidden');
+            currentCursor = null;
+            fetchOrganizations();
+        } catch (error) {
+            console.error('Error updating organization:', error);
+            showToast(error.message, 'error');
+        }
+    });
+
+    // Delete organization
+    async function deleteOrganization(orgId) {
+        const org = orgsData.find(o => o.id === orgId);
+        if (!org) return;
+
+        if (!confirm(`Are you sure you want to delete "${org.name}"?\n\nThis action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/admin/organizations/${orgId}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to delete organization');
+            }
+
+            showToast('Organization deleted successfully', 'success');
+            currentCursor = null;
+            fetchOrganizations();
+        } catch (error) {
+            console.error('Error deleting organization:', error);
+            showToast(error.message, 'error');
+        }
+    }
+
+    // Close modals
+    document.querySelectorAll('[data-close-modal]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.modal-backdrop').forEach(modal => {
+                modal.classList.add('hidden');
+            });
+        });
+    });
+
+    // Load more button
+    document.getElementById('loadMoreBtn').addEventListener('click', () => {
+        if (currentCursor) {
+            fetchOrganizations(currentCursor, true);
+        }
+    });
+
+    // Show form errors
+    function showFormErrors(errorDivId, fieldErrors) {
+        const errorDiv = document.getElementById(errorDivId);
+        const errors = [];
+
+        for (const [field, messages] of Object.entries(fieldErrors)) {
+            errors.push(...messages);
+        }
+
+        if (errors.length > 0) {
+            errorDiv.innerHTML = `
+            <div class="err-title">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                Validation Error
+            </div>
+            <ul>${errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}</ul>
+        `;
+            errorDiv.classList.remove('hidden');
+        }
+    }
+
+    // Show toast notification
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Initial load
+    fetchOrganizations();
+</script>
+</body>
+</html>
