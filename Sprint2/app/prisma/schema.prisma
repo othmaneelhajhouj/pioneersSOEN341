@@ -48,7 +48,7 @@ model User {
   role      Role
   tickets   Ticket[]
   events    Event[]  @relation("OrganizerEvents")
-  organizerStatus OrganizerStatus @default(pending)
+  organizerStatus OrganizerStatus?
   approvedBy      String?
   approvedAt      DateTime?
   decisionReason  String?
@@ -77,11 +77,13 @@ model Event {
   updatedAt DateTime @updatedAt
   moderationStatus ModerationStatus @default(pending)
   moderationReason String?
+  category String?
 
   @@index([type])
   @@index([startsAt])
   @@index([location])
   @@index([moderationStatus])
+  @@index([category])
 }
 
 model Ticket {
