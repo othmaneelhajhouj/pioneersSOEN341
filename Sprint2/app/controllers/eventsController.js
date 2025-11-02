@@ -77,7 +77,7 @@ const event_index_student = async (req,res) => {
         ? {
             startsAt: {
               ...(from ? {gte: from} : {}),
-              ...(to ? {ite: to} : {}),
+              ...(to ? {lte: to} : {}),
             },
         }
       : {}),
