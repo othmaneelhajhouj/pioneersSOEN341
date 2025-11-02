@@ -46,7 +46,7 @@ function wantsJson(req: Request) {
     const ct = req.headers["content-type"] || "";
     return (
         (typeof accept === "string" && accept.includes("application/json")) ||
-        (typeof ct === "string" && ct.includes("a^^mication/json"))
+        (typeof ct === "string" && ct.includes("application/json"))
     );
 }
 
@@ -95,11 +95,11 @@ organizerScan.post("/organizers/:organizerId/events/:eventId/scan",async(req: Re
     }
 });
 
-//POST /organizers/:organizerID/events/:eventId/scan-image
+//POST /organizers/:organizerId/events/:eventId/scan-image
 organizerScan.post("/organizers/:organizerId/events/:eventId/scan-image", upload.single("image"), async(req: Request, res: Response) => {
     try {
-        const {organizerID, eventId} = req.params;
-        const gate = await ensureOrganizerAccess(req, eventId, organizerID);
+        const {organizerId, eventId} = req.params;
+        const gate = await ensureOrganizerAccess(req, eventId, organizerId);
 
         if(!gate.ok){
             if(wantsJson(req)) return res.status(gate.code).json({error: gate.msg});

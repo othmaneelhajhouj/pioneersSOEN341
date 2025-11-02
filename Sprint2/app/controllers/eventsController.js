@@ -145,7 +145,7 @@ const event_index_student = async (req,res) => {
     //return html by default, json if requested
     const {wantsJson} = require('../utils/validation');
     if(wantsJson(req)) {
-      return res.json({date: events, meta});
+      return res.json({data: events, meta});
     }
 
     //pass meta so the view shows filter state
@@ -154,7 +154,7 @@ const event_index_student = async (req,res) => {
     console.error('Error fetching events with filters:', error);
     return res.status(500).json({error: 'Failed to fetch events'});
   }
-}
+};
 
 /**
  * GET /events/:id/ics — Download an ICS calendar file for a published event
@@ -176,7 +176,7 @@ const event_ics = async (req, res) => {
     });
 
 
-    //throws 400 if event not loaded (not found or not published)
+    //throws 404 if event not loaded (not found or not published)
     if(!ev){
       return res.status(404).json({error: 'Event not found or not published.'});
     }
@@ -200,7 +200,7 @@ const event_ics = async (req, res) => {
         String(s ?? '')
           .replace(/\\/g, '\\\\')
           .replace(/;/g, '\\;')
-          .replace(/,/g, '\\')
+          .replace(/,/g, '\\,')
           .replace(/\r?\n/g, '\\n');
 
     //ics fields

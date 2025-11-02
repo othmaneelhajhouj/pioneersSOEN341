@@ -109,7 +109,7 @@ tickets.get("/tickets/:id/qr", async(req: Request, res: Response) => {
         }
 
         //qr code generate png
-        const size = Math.max(128, Math.min(1024, Number(req.query.size) || 256)) //size = height = width is between 128 and 1024, 256 by default
+        const size = Math.max(128, Math.min(1024, Number(req.query.size) || 256)); //size = height = width is between 128 and 1024, 256 by default
         const png = await QRCode.toBuffer(t.qrToken, {
             type: "png",
             width: size,
