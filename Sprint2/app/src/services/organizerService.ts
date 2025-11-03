@@ -57,7 +57,11 @@ export async function setStatus({ // takes an object from setstatusinput, breaks
     throw new Error("NOT_FOUND");
   }
 
-  if (!TRANSITIONS[current.organizerStatus].includes(target)) { //checks if requested transition valid
+  if (!current.organizerStatus) {  //checks if status transition valid
+    if (!["approved", "denied"].includes(target)) {
+      throw new Error("INVALID_TRANSITION");
+    }
+  } else if (!TRANSITIONS[current.organizerStatus].includes(target)) {
     throw new Error("INVALID_TRANSITION");
   }
 

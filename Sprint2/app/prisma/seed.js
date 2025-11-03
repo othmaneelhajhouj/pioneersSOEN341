@@ -9,12 +9,13 @@ async function main() {
   await prisma.ticket.deleteMany();
   await prisma.event.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.organization.deleteMany();
 
-  console.log("Creating users...");
+  console.log("Creating users/organization...");
   const [organizer1, organizer2, organizer3] = await Promise.all([
-    prisma.user.create({ data: { email: "org1@example.com", firstName: "Alex",   lastName: "Smith",  role: "organizer" } }),
-    prisma.user.create({ data: { email: "org2@example.com", firstName: "Morgan", lastName: "Chen",   role: "organizer" } }),
-    prisma.user.create({ data: { email: "org3@example.com", firstName: "Jamie",  lastName: "Lopez",  role: "organizer" } }),
+    prisma.user.create({ data: { email: "org1@example.com", firstName: "Alex",   lastName: "Smith",  role: "organizer", organizerStatus: "pending" } }),
+    prisma.user.create({ data: { email: "org2@example.com", firstName: "Morgan", lastName: "Chen",   role: "organizer", organizerStatus: "pending" } }),
+    prisma.user.create({ data: { email: "org3@example.com", firstName: "Jamie",  lastName: "Lopez",  role: "organizer", organizerStatus: "pending" } }),
   ]);
 
   const [student1, student2, student3, student4, admin1] = await Promise.all([
@@ -24,6 +25,25 @@ async function main() {
     prisma.user.create({ data: { email: "student4@example.com", firstName: "Sam",    lastName: "Brown", role: "student"  } }),
     prisma.user.create({ data: { email: "admin1@example.com",   firstName: "Avery",  lastName: "Ng",    role: "admin"    } }),
   ]);
+
+  const organization = await prisma.organization.create({
+    data: {
+      name: "CS Club",
+      description: "Computer science society",
+    },
+  });
+  await prisma.user.update({
+    where: { id: organizer1.id },
+    data: { organizationId: organization.id },
+  });
+  await prisma.user.update({
+    where: { id: organizer2.id },
+    data: { organizationId: organization.id },
+  });
+  await prisma.user.update({
+    where: { id: organizer3.id },
+    data: { organizationId: organization.id },
+  });
 
   console.log("Creating events (only organizers own them)...");
   const createdEvents = [];
@@ -46,6 +66,7 @@ async function main() {
     capacity: 200,
     organizerId: organizer1.id,
     published: true,
+    category: "Campus life",
   });
   await addEvent({
     title: "Career Development Workshop",
@@ -58,6 +79,7 @@ async function main() {
     capacity: 100,
     organizerId: organizer1.id,
     published: true,
+    category: "Career development"
   });
 
   // Organizer 2
@@ -72,6 +94,7 @@ async function main() {
     capacity: 50,
     organizerId: organizer2.id,
     published: true,
+    category: "Career development"
   });
   await addEvent({
     title: "Tech Networking Night",
@@ -84,6 +107,7 @@ async function main() {
     capacity: 120,
     organizerId: organizer2.id,
     published: false, // draft
+    category: "Career development"
   });
 
   // Organizer 3
@@ -98,6 +122,7 @@ async function main() {
     capacity: 300,
     organizerId: organizer3.id,
     published: true,
+    category: "Campus life"
   });
   await addEvent({
     title: "Startup Pitch Night",
@@ -110,6 +135,7 @@ async function main() {
     capacity: 150,
     organizerId: organizer3.id,
     published: false, // draft
+    category: "Career development"
   });
   await addEvent({
     title: "Summer Wrap-Up Social",
@@ -122,6 +148,7 @@ async function main() {
     capacity: 80,
     organizerId: organizer3.id,
     published: true,
+    category: "Campus life"
   });
 
   console.log("Creating tickets...");

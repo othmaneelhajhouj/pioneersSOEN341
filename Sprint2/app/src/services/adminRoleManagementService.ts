@@ -28,6 +28,12 @@ export async function setRole({adminId, userId, role,} :
             where: {id: userId},
             data: {
                 role,
+                organizerStatus: role === "organizer" ? "pending" : null,
+                ...(role !== "organizer" ? {
+                    approvedBy: null,
+                    approvedAt: null,
+                    decisionReason: null
+                }: {}),
             },
         });
     } 
