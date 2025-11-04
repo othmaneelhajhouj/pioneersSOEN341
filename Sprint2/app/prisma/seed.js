@@ -1,8 +1,15 @@
 const { PrismaClient } = require("generated-prisma/client");
 const prisma = new PrismaClient();
+const crypto = require("crypto");
 
 const daysFromNow = (d) => new Date(Date.now() + d * 24 * 60 * 60 * 1000);
 const hoursAfter = (date, h) => new Date(date.getTime() + h * 60 * 60 * 1000);
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16);
+  const derived = crypto.scryptSync(password, salt, 64);
+  return `${salt.toString("hex")}:${derived.toString("hex")}`;
+}
 
 async function main() {
   console.log("Resetting database...");
@@ -13,17 +20,17 @@ async function main() {
 
   console.log("Creating users/organization...");
   const [organizer1, organizer2, organizer3] = await Promise.all([
-    prisma.user.create({ data: { email: "org1@example.com", firstName: "Alex",   lastName: "Smith",  role: "organizer", organizerStatus: "pending" } }),
-    prisma.user.create({ data: { email: "org2@example.com", firstName: "Morgan", lastName: "Chen",   role: "organizer", organizerStatus: "pending" } }),
-    prisma.user.create({ data: { email: "org3@example.com", firstName: "Jamie",  lastName: "Lopez",  role: "organizer", organizerStatus: "pending" } }),
+    prisma.user.create({ data: { email: "org1@example.com", firstName: "Alex",   lastName: "Smith",  role: "organizer", organizerStatus: "pending", passwordHash: hashPassword("Organizer123!") } }),
+    prisma.user.create({ data: { email: "org2@example.com", firstName: "Morgan", lastName: "Chen",   role: "organizer", organizerStatus: "pending", passwordHash: hashPassword("Organizer123!") } }),
+    prisma.user.create({ data: { email: "org3@example.com", firstName: "Jamie",  lastName: "Lopez",  role: "organizer", organizerStatus: "pending", passwordHash: hashPassword("Organizer123!") } }),
   ]);
 
   const [student1, student2, student3, student4, admin1] = await Promise.all([
-    prisma.user.create({ data: { email: "student1@example.com", firstName: "Casey",  lastName: "Doe",   role: "student"  } }),
-    prisma.user.create({ data: { email: "student2@example.com", firstName: "Jordan", lastName: "Lee",   role: "student"  } }),
-    prisma.user.create({ data: { email: "student3@example.com", firstName: "Taylor", lastName: "Kim",   role: "student"  } }),
-    prisma.user.create({ data: { email: "student4@example.com", firstName: "Sam",    lastName: "Brown", role: "student"  } }),
-    prisma.user.create({ data: { email: "admin1@example.com",   firstName: "Avery",  lastName: "Ng",    role: "admin"    } }),
+    prisma.user.create({ data: { email: "student1@example.com", firstName: "Casey",  lastName: "Doe",   role: "student",  passwordHash: hashPassword("Student123!")  } }),
+    prisma.user.create({ data: { email: "student2@example.com", firstName: "Jordan", lastName: "Lee",   role: "student",  passwordHash: hashPassword("Student123!")  } }),
+    prisma.user.create({ data: { email: "student3@example.com", firstName: "Taylor", lastName: "Kim",   role: "student",  passwordHash: hashPassword("Student123!")  } }),
+    prisma.user.create({ data: { email: "student4@example.com", firstName: "Sam",    lastName: "Brown", role: "student",  passwordHash: hashPassword("Student123!")  } }),
+    prisma.user.create({ data: { email: "admin1@example.com",   firstName: "Avery",  lastName: "Ng",    role: "admin",    passwordHash: hashPassword("Admin123!")    } }),
   ]);
 
   const organization = await prisma.organization.create({
@@ -179,6 +186,10 @@ async function main() {
   });
 
   console.log("Seed complete");
+  console.log("Default credentials:");
+  console.log("  Admin:     admin1@example.com / Admin123!");
+  console.log("  Organizer: org1@example.com / Organizer123!");
+  console.log("  Student:   student1@example.com / Student123!");
 }
 
 main()
