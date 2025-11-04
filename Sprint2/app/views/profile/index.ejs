@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>My Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <%- include('../partials/nav', { active: 'profile', injectStyles: true }) %>
+</head>
+<body>
+<main class="container py-5" style="max-width:720px;">
+  <h1 class="mb-4 text-center text-md-start">My Profile</h1>
+
+  <% if (typeof loadError !== 'undefined' && loadError) { %>
+    <div class="alert alert-danger">We couldn't load your profile right now. Please try again.</div>
+  <% } else { %>
+    <%
+      const userData = user || {};
+      const organizer = organizerRequest || {};
+      const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(' ') || '—';
+      const status = userData.organizerStatus || (userData.role === 'organizer' ? 'pending' : null);
+      const statusLabels = {
+        pending: 'Pending review',
+        approved: 'Approved',
+        denied: 'Denied',
+        revoked: 'Revoked',
+      };
+      const statusBadgeClass = {
+        pending: 'bg-warning text-dark',
+        approved: 'bg-success',
+        denied: 'bg-danger',
+        revoked: 'bg-secondary',
+      };
+      const statusLabel = status ? (statusLabels[status] || status) : 'Not requested';
+      const badgeClass = status ? (statusBadgeClass[status] || 'bg-secondary') : 'bg-secondary';
+      let flashMessage = null;
+      let flashVariant = 'success';
+      if (requested) {
+        flashMessage = 'Thanks! Your organizer request was sent.'; 
+      } else if (errorCode) {
+        flashVariant = 'danger';
+        if (errorCode === 'notallowed') {
+          flashMessage = 'You already have organizer access.';
+        } else if (errorCode === 'notfound') {
+          flashMessage = 'We could not find your profile.';
+        } else if (errorCode === 'server') {
+          flashMessage = 'Something went wrong while submitting your request. Please try again.';
+        } else {
+          flashMessage = 'We could not process your request.';
+        }
+      }
+    %>
+
+    <% if (flashMessage) { %>
+      <div class="alert alert-<%= flashVariant %> alert-dismissible fade show" role="alert">
+        <%= flashMessage %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    <% } %>
+
+    <section class="card bg-dark border-secondary shadow-sm mb-4">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Account details</h2>
+        <dl class="row mb-0 gy-2 text-start">
+          <dt class="col-sm-4 text-secondary">Name</dt>
+          <dd class="col-sm-8 mb-0"><%= fullName %></dd>
+
+          <dt class="col-sm-4 text-secondary">Email</dt>
+          <dd class="col-sm-8 mb-0"><%= userData.email %></dd>
+
+          <dt class="col-sm-4 text-secondary">Role</dt>
+          <dd class="col-sm-8 mb-0 text-capitalize"><%= userData.role %></dd>
+
+          <dt class="col-sm-4 text-secondary">Organizer status</dt>
+          <dd class="col-sm-8 mb-0">
+            <span class="badge <%= badgeClass %>"><%= statusLabel %></span>
+            <% if (userData.approvedAt && status === 'approved') { %>
+              <span class="small text-secondary d-block mt-1">Approved on <%= new Date(userData.approvedAt).toLocaleDateString() %></span>
+            <% } %>
+            <% if (userData.decisionReason && (status === 'denied' || status === 'revoked')) { %>
+              <span class="small text-secondary d-block mt-1">Reason: <%= userData.decisionReason %></span>
+            <% } %>
+          </dd>
+        </dl>
+      </div>
+    </section>
+
+    <section class="card bg-dark border-secondary shadow-sm">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Organizer access</h2>
+        <p class="text-secondary small mb-4"><%= organizer.message %></p>
+
+        <% if (organizer.canRequest) { %>
+          <form method="post" action="/profile/organizer-request" class="d-flex flex-column flex-md-row gap-3 align-items-md-center">
+            <button type="submit" class="btn btn-primary">
+              <%= organizer.buttonLabel %>
+            </button>
+          </form>
+        <% } else if (status === 'approved') { %>
+          <a href="/organizers/<%= userData.id %>/events" class="btn btn-outline-light btn-sm">Go to My Events</a>
+        <% } %>
+      </div>
+    </section>
+  <% } %>
+</main>
+<%- include('../partials/footer') %>
+</body>
+</html>

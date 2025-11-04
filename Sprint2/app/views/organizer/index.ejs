@@ -8,19 +8,83 @@
 </head>
 <body data-organizer-id="<%= organizerId %>">
 <%
+  // ========== Setup filter and event data ==========
+  // Get filter values from the controller (or use defaults)
   const filtersData = (typeof filters !== 'undefined' && filters) ? filters : { q: '', type: '', status: '', sort: 'newest' };
+    
+  // Helper to safely escape HTML attributes
   const escapeAttr = (s = '') => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  
+  // Get events list (or empty array)
   const list = Array.isArray(events) ? events : [];
-  const publishedCount = list.filter(e => e.published).length;
-  const draftCount = list.length - publishedCount;
-  const ticketsSold = list.reduce((sum, e) => sum + (e._count ? e._count.tickets : 0), 0);
-  const totalCapacity = list.reduce((sum, e) => sum + (typeof e.capacity === 'number' ? e.capacity : 0), 0);
-  const utilization = totalCapacity ? Math.min(100, Math.round((ticketsSold / totalCapacity) * 100)) : 0;
+  const hasError = typeof loadError !== 'undefined' ? loadError : false;
+  
+  // ========== Calculate dashboard statistics ==========
+  const summaryData = summary || {};
+  const publishedCount = summaryData.publishedCount || 0;
+  const draftCount = summaryData.draftCount || Math.max(list.length - publishedCount, 0);
+  const ticketsSold = summaryData.ticketsSoldTotal || 0;
+  const totalCapacity = summaryData.capacityTotal || 0;
+  const checkedInTotal = summaryData.checkedInTotal || 0;
+  
+  // Calculate percentages
+  const utilization = summaryData.utilizationTotal || (totalCapacity ? Math.round((ticketsSold / totalCapacity) * 100) : 0);
+  const attendanceRateAggregate = summaryData.attendanceRateTotal || (ticketsSold ? Math.round((checkedInTotal / ticketsSold) * 100) : 0);
+  
+  // ========== Helper functions for date/timeline ==========
   const nowTs = Date.now();
-  const upcomingEvents = list.filter(e => e.startsAt && new Date(e.startsAt).getTime() > nowTs).sort((a,b)=> new Date(a.startsAt) - new Date(b.startsAt));
+  const toDateOrNull = (value) => value ? new Date(value) : null;
+  
+  // Figure out if event is upcoming, live, or completed
+  const timelineInfo = (start, end) => {
+    if (!start || Number.isNaN(start.getTime())) return { text: 'Schedule TBD', className: '' };
+    if (!end || Number.isNaN(end.getTime())) return { text: start.toLocaleDateString(), className: '' };
+    if (nowTs < start.getTime()) {
+      const diffDays = Math.floor((start.getTime() - nowTs) / (24 * 60 * 60 * 1000));
+      if (diffDays <= 0) return { text: 'Starts later today', className: 'status-upcoming' };
+      if (diffDays === 1) return { text: 'Starts tomorrow', className: 'status-upcoming' };
+      return { text: `Starts in ${diffDays} days`, className: 'status-upcoming' };
+    }
+    if (nowTs >= start.getTime() && nowTs <= end.getTime()) {
+      return { text: 'Happening now', className: 'status-live' };
+    }
+    return { text: 'Completed', className: 'status-ended' };
+  };
+  
+  // ========== Process each event with extra info ==========
+  const processedEvents = list.map(event => {
+    const start = toDateOrNull(event.startsAt);
+    const end = toDateOrNull(event.endsAt);
+    const created = toDateOrNull(event.createdAt);
+    const { text: timelineText, className: timelineClass } = timelineInfo(start, end);
+    const priceLabel = event.type === 'paid' && typeof event.price === 'number'
+      ? `$${(event.price / 100).toFixed(2)} per ticket`
+      : 'Free entry';
+    return {
+      ...event,
+      start,
+      end,
+      created,
+      timelineText,
+      timelineClass,
+      priceLabel,
+      revenueLabel: event.type === 'paid' && typeof event.price === 'number'
+        ? `$${((event.price / 100) * event.ticketsSold).toFixed(2)}`
+        : '—',
+    };
+  });
+  
+  // ========== Find next upcoming event ==========
+  const upcomingEvents = processedEvents
+    .filter(e => e.start && e.start.getTime() > nowTs)
+    .sort((a,b)=> a.start - b.start);
   const nextEvent = upcomingEvents[0];
   const nextEventDate = nextEvent ? new Date(nextEvent.startsAt) : null;
+  
+  // Breadcrumb navigation
   const crumbs = [{label:'Organizer', href:`/organizers/${organizerId}/events`},{label:'My Events'}];
+  
+  // ========== Build filter controls HTML ==========
   const heroTools = `
   <div class=\"filters-shell\">
     <div class=\"filters-shell__row filters-shell__row--search\">
@@ -54,8 +118,10 @@
 <%- include('../partials/hero', { title: 'My Events', subtitle: 'Publish, refine or retire events with a few taps', heroTools }) %>
 
 <main class="container" style="padding-bottom:70px;">
+  <!-- ========== Dashboard Stats Section ========== -->
   <div class="section-title u-section-title">Dashboard</div>
   <section class="insights">
+    <!-- Live Events Card -->
     <article class="insight-card accent" aria-labelledby="metricLiveEvents">
       <div class="insight-icon" aria-hidden="true"><i class="fa-solid fa-bullhorn"></i></div>
       <div>
@@ -64,6 +130,8 @@
         <div class="insight-helper" id="insightDraftHelper"><%= draftCount %> draft<%= draftCount === 1 ? '' : 's' %> ready to go</div>
       </div>
     </article>
+
+    <!-- Tickets Sold Card -->
     <article class="insight-card" aria-labelledby="metricTickets">
       <div class="insight-icon" aria-hidden="true"><i class="fa-solid fa-ticket"></i></div>
       <div>
@@ -72,6 +140,8 @@
         <div class="insight-helper" id="insightCapacityHelper"><%= totalCapacity ? `${utilization}% of ${totalCapacity} seats` : 'Add capacity to unlock stats' %></div>
       </div>
     </article>
+
+    <!-- Next Event Card -->
     <article class="insight-card" aria-labelledby="metricNext">
       <div class="insight-icon" aria-hidden="true"><i class="fa-solid fa-calendar-days"></i></div>
       <div>
@@ -88,15 +158,29 @@
     </article>
   </section>
 
+  <!-- ========== Events List Section ========== -->
   <div class="section-title" style="margin-top:26px;margin-bottom:10px;">Your events</div>
-  <% if (!list.length) { %>
+  
+  <!-- Error message if loading failed -->
+  <% if (hasError) { %>
+    <div class="alert alert-danger">We could not load your events right now. Please refresh the page.</div>
+  <% } %>
+  
+  <!-- Empty state if no events -->
+  <% if (!processedEvents.length) { %>
     <div class="row-card" style="justify-content:center; text-align:center; padding:26px">
       <div class="o-title" style="margin-bottom:8px">No events yet</div>
       <div class="o-sub">Use <b>New Event</b> to launch your first experience in minutes.</div>
     </div>
   <% } else { %>
+    <!-- Events Grid - shows all events as cards -->
     <section class="row-grid" style="display:grid; gap:14px" data-events-grid>
-      <% list.forEach(e => { const start = e.startsAt ? new Date(e.startsAt) : null; const end = e.endsAt ? new Date(e.endsAt) : null; const created = e.createdAt ? new Date(e.createdAt) : null; const startTs = start ? start.getTime() : NaN; const endTs = end ? end.getTime() : NaN; const now = Date.now(); const sold = e._count ? e._count.tickets : 0; const capacity = typeof e.capacity === 'number' ? e.capacity : 0; const remaining = capacity - sold; const fill = capacity ? Math.min(100, Math.round((sold / capacity) * 100)) : 0; let timelineClass=''; let timelineText='Schedule TBD'; if(!Number.isNaN(startTs)&&!Number.isNaN(endTs)){ if(now < startTs){ const diffDays=Math.floor((startTs-now)/(24*60*60*1000)); if(diffDays <= 0){ timelineText='Starts later today'; } else if(diffDays===1){ timelineText='Starts tomorrow'; } else { timelineText=`Starts in ${diffDays} days`; } timelineClass='status-upcoming'; } else if(now>=startTs && now<=endTs){ timelineText='Happening now'; timelineClass='status-live'; } else { timelineText='Completed'; timelineClass='status-ended'; } } else if(!Number.isNaN(startTs)){ timelineText=start.toLocaleDateString(); } %>
+      <% processedEvents.forEach(e => { 
+        const startTs = e.start ? e.start.getTime() : NaN; 
+        const endTs = e.end ? e.end.getTime() : NaN; 
+      %>
+
+      <!-- Individual Event Card -->
       <article class="row-card event-card" data-event-card
         data-event-id="<%= e.id %>"
         data-organizer="<%= organizerId %>"
@@ -106,10 +190,13 @@
         data-published="<%= e.published ? 'true' : 'false' %>"
         data-starts-at="<%= Number.isNaN(startTs) ? '' : startTs %>"
         data-ends-at="<%= Number.isNaN(endTs) ? '' : endTs %>"
-        data-created-at="<%= created ? created.getTime() : '' %>"
-        data-capacity="<%= capacity %>"
-        data-sold="<%= sold %>"
+        data-created-at="<%= e.created ? e.created.getTime() : '' %>"
+        data-capacity="<%= e.capacityValue || 0 %>"
+        data-sold="<%= e.ticketsSold || 0 %>"
+        data-checked-in="<%= e.checkedInCount || 0 %>"
         data-price="<%= typeof e.price === 'number' ? e.price : '' %>">
+        
+        <!-- Event Header: Title and Status -->
         <div class="event-header">
           <div class="o-title"><%= e.title %></div>
           <span class="status-chip <%= e.published ? 'live' : '' %>">
@@ -117,31 +204,38 @@
             <span class="status-label"><%= e.published ? 'Published' : 'Draft' %></span>
           </span>
         </div>
+
+        <!-- Event Metadata: Date, Time, Location -->
         <div class="event-meta">
-          <% if (start) { %><span><i class="fa-regular fa-clock"></i> <%= start.toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) %></span><% } %>
-          <% if (end) { %><span><i class="fa-solid fa-hourglass-half"></i> Ends <%= end.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) %></span><% } %>
+          <% if (e.start) { %><span><i class="fa-regular fa-clock"></i> <%= e.start.toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) %></span><% } %>
+          <% if (e.end) { %><span><i class="fa-solid fa-hourglass-half"></i> Ends <%= e.end.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) %></span><% } %>
           <span><i class="fa-solid fa-location-dot"></i> <%= e.location %></span>
-          <span class="timeline-tag <%= timelineClass %>"><i class="fa-solid fa-bolt"></i> <%= timelineText %></span>
+          <span class="timeline-tag <%= e.timelineClass %>"><i class="fa-solid fa-bolt"></i> <%= e.timelineText %></span>
         </div>
+
+        <!-- Event Details Grid -->
         <div class="grid-meta">
+          <!-- Capacity and Ticket Stats -->
           <div class="event-extra">
-            <div class="o-sub">Capacity <b><%= capacity %></b> · Tickets sold <b><%= sold %></b> · Seats left <b><%= Math.max(remaining,0) %></b></div>
-            <div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= fill %>">
-              <div class="meter__fill" style="--fill:<%= fill %>%;"></div>
+            <div class="o-sub">Capacity <b><%= e.capacityValue || 0 %></b> · Tickets sold <b><%= e.ticketsSold || 0 %></b> · Seats left <b><%= Math.max(e.remaining || 0,0) %></b></div>
+            <!-- Progress bar showing utilization -->
+            <div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= e.utilization || 0 %>">
+              <div class="meter__fill" style="--fill:<%= e.utilization || 0 %>%;"></div>
             </div>
             <div class="helper meter-helper">
-              <span>Utilization <b><%= fill %>%</b></span>
-              <span>Revenue <b><%= e.type === 'paid' && typeof e.price === 'number' ? '$' + ((e.price/100) * sold).toFixed(2) : '—' %></b></span>
+              <span>Utilization <b><%= e.utilization || 0 %>%</b></span>
+              <span>Attendance <b><%= e.attendanceRate || 0 %>%</b> (<%= e.checkedInCount || 0 %>)</span>
+              <span>Revenue <b><%= e.revenueLabel %></b></span>
             </div>
           </div>
+
+          <!-- Event Type and Price -->
           <div class="event-type">
-            <% if (e.type === 'paid' && typeof e.price === 'number') { %>
-              <span class="chip paid"><i class="fa-solid fa-dollar-sign"></i> <%= (e.price/100).toFixed(2) %> per ticket</span>
-            <% } else { %>
-              <span class="chip free"><i class="fa-solid fa-ticket"></i> Free entry</span>
-            <% } %>
-            <div class="helper">Created <%= created ? created.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }) : '—' %></div>
+            <span class="chip <%= e.type === 'paid' ? 'paid' : 'free' %>"><i class="fa-solid <%= e.type === 'paid' ? 'fa-dollar-sign' : 'fa-ticket' %>"></i> <%= e.priceLabel %></span>
+            <div class="helper">Created <%= e.created ? e.created.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }) : '—' %></div>
           </div>
+
+          <!-- Publish Toggle Switch -->
           <div class="event-controls">
             <div class="toggle <%= e.published ? 'on' : '' %>" data-id="<%= e.id %>" role="switch" aria-checked="<%= e.published ? 'true' : 'false' %>" aria-label="Toggle publish status for <%= e.title %>">
               <div class="knob"></div>
@@ -149,6 +243,8 @@
             </div>
             <div class="helper">Tap to <%= e.published ? 'unpublish' : 'publish' %></div>
           </div>
+         
+          <!-- Action Buttons -->
           <div class="o-actions">
             <a class="btn secondary" href="/organizers/<%= organizerId %>/events/<%= e.id %>"><i class="fa-solid fa-up-right-from-square"></i> View</a>
             <button class="btn danger" type="button" data-action="delete" data-event-id="<%= e.id %>"><i class="fa-solid fa-trash"></i> Delete</button>
@@ -163,7 +259,7 @@
   <% } %>
 </main>
 
-<!-- Floating Action Button -->
+<!-- Floating Action Button to create new event -->
 <button class="btn fab" type="button" id="openCreateModal"><i class="fa-solid fa-plus"></i> New</button>
 
 <!-- Create Event Modal-->

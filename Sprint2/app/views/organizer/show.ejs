@@ -7,13 +7,18 @@
   <%- include('../partials/styles') %>
   <% const crumbs = [{label:'Organizer', href:`/organizers/${organizerId}/events`},{ label: event ? event.title : 'Event'}]; %>
 </head>
-<body data-organizer-id="<%= organizerId %>" data-flash="<%= (flash ? String(flash).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '') %>">
+<body data-organizer-id="<%= organizerId %>" data-event-id="<%= event ? event.id : '' %>" data-flash="<%= (flash ? String(flash).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '') %>">
+<!-- Navigation and Hero -->
 <%- include('../partials/nav', { active: 'organizer:show', brand: 'Organizer', crumbs }) %>
 <%- include('../partials/hero', { title: event ? event.title : 'Event Details', subtitle: event ? 'Overview, performance and attendees' : 'This event could not be found' }) %>
+
 <main class="container pb-5">
+  <!-- Success message (if any) -->
   <% if (flash) { %>
     <div class="alert alert-success"><i class="fa-solid fa-circle-check me-1"></i> <%= flash %></div>
   <% } %>
+  
+  <!-- Error messages (if any) -->
   <% if (errors && errors.length) { %>
     <div class="alert alert-danger">
       <strong><i class="fa-solid fa-triangle-exclamation me-1"></i>Issues:</strong>
@@ -23,6 +28,7 @@
     </div>
   <% } %>
 
+  <!-- Show error if event not found -->
   <% if (!event) { %>
     <div class="row-card" style="display:grid;gap:14px;max-width:560px;margin:0 auto 40px auto;text-align:center;">
       <div class="o-title" style="font-size:20px;">Event unavailable</div>
@@ -30,16 +36,27 @@
       <div><a class="btn secondary" href="/organizers/<%= organizerId %>/events"><i class="fa-solid fa-arrow-left"></i> Back to events</a></div>
     </div>
   <% } else { %>
-    <% const ticketsSold = event._count && typeof event._count.tickets==='number'? event._count.tickets:0;
-       const capacity = typeof event.capacity==='number'? event.capacity:0;
-       const remaining = capacity - ticketsSold;
-       const utilization = capacity ? Math.min(100, Math.round((ticketsSold/capacity)*100)) : 0;
-       const revenue = event.type==='paid' && typeof event.price==='number' ? (event.price/100) * ticketsSold : null;
-       const formatDateTime = v=>{ if(!v) return '—'; const d=new Date(v); if(isNaN(d)) return '—'; return d.toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); };
-       const formatDate = v=>{ if(!v) return '—'; const d=new Date(v); if(isNaN(d)) return '—'; return d.toLocaleDateString([], {month:'short',day:'numeric',year:'numeric'}); };
-       const formatCurrency = val => (val===null||isNaN(val)) ? '—' : new Intl.NumberFormat(undefined,{style:'currency',currency:'CAD'}).format(val);
+    <% 
+    // ========== Calculate analytics metrics ==========
+    const metrics = analytics || {};
+    const ticketsSold = metrics.ticketsSold || 0;
+    const capacity = metrics.capacity || 0;
+    const remaining = metrics.remaining || 0;
+    const utilization = metrics.utilization || 0;
+    const checkedIn = metrics.checkedIn || 0;
+    const attendanceRate = metrics.attendanceRate || 0;
+    const revenue = metrics.revenue ?? null;
+    const pricePerTicket = typeof event.price === 'number' ? event.price / 100 : null;
+    
+    // Helper functions for formatting
+    const formatDateTime = v=>{ if(!v) return '—'; const d=new Date(v); if(isNaN(d)) return '—'; return d.toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); };
+    const formatDate = v=>{ if(!v) return '—'; const d=new Date(v); if(isNaN(d)) return '—'; return d.toLocaleDateString([], {month:'short',day:'numeric',year:'numeric'}); };
+    const formatCurrency = val => (val===null||isNaN(val)) ? '—' : new Intl.NumberFormat(undefined,{style:'currency',currency:'CAD'}).format(val);
     %>
+
+    <!-- ========== Analytics Cards Section ========== -->
     <section class="row-grid" style="display:grid;gap:18px;margin-bottom:34px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));">
+      <!-- Status Card -->
       <div class="row-card" style="display:grid;gap:10px;">
         <div class="o-sub" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Status</div>
         <div>
@@ -49,6 +66,7 @@
           </span>
         </div>
         <div class="helper">Created <%= formatDate(event.createdAt) %></div>
+        <!-- Publish toggle switch -->
         <div class="event-controls" style="margin-top:4px;">
           <div class="toggle <%= event.published ? 'on' : '' %>" id="togglePublish" data-event-id="<%= event.id %>" data-published="<%= event.published %>" role="switch" aria-checked="<%= event.published %>">
             <div class="knob"></div><span>Draft</span><span>Live</span>
@@ -56,6 +74,8 @@
           <div class="helper">Tap to <%= event.published ? 'unpublish':'publish' %></div>
         </div>
       </div>
+      
+      <!-- Ticket Sales Card -->
       <div class="row-card" style="display:grid;gap:10px;">
         <div class="o-sub" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Ticket Sales</div>
         <div class="o-title" style="font-size:24px;letter-spacing:.5px;"><%= ticketsSold %>/<%= capacity %></div>
@@ -63,8 +83,11 @@
         <div class="helper" style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
           <span>Remaining <b><%= remaining >=0 ? remaining:0 %></b></span>
           <span>Utilization <b><%= utilization %>%</b></span>
+          <span>Attendance <b><%= attendanceRate %>%</b> (<%= checkedIn %>/<%= ticketsSold %>)</span>
         </div>
       </div>
+      
+      <!-- Revenue Card -->
       <div class="row-card" style="display:grid;gap:10px;">
         <div class="o-sub" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Revenue</div>
         <div class="o-title" style="font-size:24px;letter-spacing:.5px;">
@@ -72,6 +95,8 @@
         </div>
         <div class="helper"><%= event.type==='paid'? 'Ticket price ' + formatCurrency(event.price/100): 'No ticket price' %></div>
       </div>
+      
+      <!-- Timeline Card -->
       <div class="row-card" style="display:grid;gap:10px;">
         <div class="o-sub" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Meta</div>
         <div class="helper">Event ID <code><%= event.id %></code></div>
@@ -96,12 +121,18 @@
         <span><i class="fa-solid fa-hourglass-half"></i> Ends <%= formatDateTime(event.endsAt) %></span>
         <span><i class="fa-solid fa-location-dot"></i> <%= event.location %></span>
         <span><i class="fa-solid fa-people-group"></i> Capacity <%= capacity %></span>
+        <span><i class="fa-solid fa-circle-check"></i> Checked in <%= checkedIn %></span>
       </div>
     </section>
 
-    <section class="row-card" style="display:grid;gap:18px;">
-      <div class="o-title" style="font-size:20px;display:flex;align-items:center;gap:8px;">
-        <i class="fa-solid fa-users"></i> Attendees <span class="helper" style="font-weight:600;">(<%= ticketsSold %>)</span>
+    <section class="row-card" style="display:grid;gap:18px;margin-bottom:28px;">
+      <div class="o-title" style="font-size:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <span style="display:flex;align-items:center;gap:8px;">
+          <i class="fa-solid fa-users"></i> Attendees <span class="helper" style="font-weight:600;">(<%= ticketsSold %>)</span>
+        </span>
+        <a class="btn btn-outline-light btn-sm" href="/organizers/<%= organizerId %>/events/<%= event.id %>/attendees.csv">
+          <i class="fa-solid fa-file-arrow-down me-1"></i>Export CSV
+        </a>
       </div>
       <% if (!event.tickets || !event.tickets.length) { %>
         <div class="helper">No tickets sold yet.</div>
@@ -129,6 +160,30 @@
           </table>
         </div>
       <% } %>
+    </section>
+    <section class="row-card" style="display:grid;gap:18px;">
+      <div class="o-title" style="font-size:20px;display:flex;align-items:center;gap:8px;">
+        <i class="fa-solid fa-qrcode"></i> Ticket Validation
+      </div>
+      <p class="o-sub" style="font-size:13px;">
+        Scan tickets on-site by entering a QR token or uploading a QR code image exported from a phone or kiosk.
+      </p>
+      <div style="display:grid;gap:18px;">
+        <div style="display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));align-items:start;">
+          <form id="qrTokenForm" style="display:grid;gap:10px;" autocomplete="off">
+            <label class="form-label small text-uppercase text-secondary" for="qrTokenInput">Enter QR token</label>
+            <input type="text" class="form-control" id="qrTokenInput" name="qrToken" placeholder="Paste or scan QR token value" required />
+            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-check me-1"></i>Validate ticket</button>
+          </form>
+          <form id="qrImageForm" style="display:grid;gap:10px;" enctype="multipart/form-data">
+            <label class="form-label small text-uppercase text-secondary" for="qrImageInput">Upload QR image</label>
+            <input type="file" class="form-control" id="qrImageInput" name="image" accept="image/*" required />
+            <div class="form-text">PNG or JPG · Max 5 MB</div>
+            <button class="btn btn-outline-light" type="submit"><i class="fa-solid fa-camera me-1"></i>Scan image</button>
+          </form>
+        </div>
+        <div id="scanResult" class="alert alert-secondary d-none" role="status"></div>
+      </div>
     </section>
   <% } %>
 </main>
