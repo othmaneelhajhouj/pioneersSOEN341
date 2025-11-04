@@ -5,6 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const flashMessage = document.body.dataset.flash || '';
   if(flashMessage) showToast(flashMessage,'success');
 
+  const organizerId = document.body.dataset.organizerId;
+  const eventId = document.body.dataset.eventId;
+
   // Bind single publish toggle if present
   const publishToggle = document.getElementById('togglePublish');
   if(publishToggle){
@@ -55,6 +58,114 @@ document.addEventListener('DOMContentLoaded', () => {
           delBtn.disabled = false;
         }
       }catch(err){ console.error(err); showToast('Network error','error'); delBtn.disabled=false; }
+    });
+  }
+
+  // QR validation helpers
+  const scanResult = document.getElementById('scanResult');
+  const updateScanResult = (variant, message) => {
+    if(!scanResult) return;
+    scanResult.classList.remove('d-none', 'alert-secondary', 'alert-success', 'alert-danger');
+    const klass = variant === 'success' ? 'alert-success' : variant === 'warning' ? 'alert-secondary' : 'alert-danger';
+    scanResult.classList.add(klass);
+    scanResult.textContent = message;
+  };
+
+  const describeState = (payload) => {
+    if(!payload) return {variant: 'danger', message: 'Unknown response.'};
+    if(payload.state === 'checked_in') {
+      const attendee = payload.ticket?.user;
+      const name = attendee ? [attendee.firstName, attendee.lastName].filter(Boolean).join(' ').trim() : '';
+      return {
+        variant: 'success',
+        message: `Ticket ${payload.ticket?.id || ''} checked in${name ? ` for ${name}` : ''}.`,
+      };
+    }
+    if(payload.state === 'already_used') {
+      return {
+        variant: 'warning',
+        message: `Ticket already used${payload.usedAt ? ` on ${new Date(payload.usedAt).toLocaleString()}` : ''}.`,
+      };
+    }
+    if(payload.state === 'not_found') {
+      return {variant: 'danger', message: 'No ticket matched that QR code.'};
+    }
+    if(payload.state === 'invalid_qr') {
+      return {variant: 'danger', message: 'Unable to read a QR code from that image.'};
+    }
+    return {variant: 'danger', message: payload.error || 'Validation failed.'};
+  };
+
+  // Token form
+  const qrTokenForm = document.getElementById('qrTokenForm');
+  if(qrTokenForm && organizerId && eventId){
+    qrTokenForm.addEventListener('submit', async (evt) => {
+      evt.preventDefault();
+      const tokenInput = document.getElementById('qrTokenInput');
+      if(!tokenInput?.value.trim()) {
+        updateScanResult('danger', 'QR token is required.');
+        return;
+      }
+      const submitBtn = qrTokenForm.querySelector('button[type="submit"]');
+      if(submitBtn) submitBtn.disabled = true;
+      try{
+        const res = await fetch(`/organizers/${organizerId}/events/${eventId}/scan`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({ qrToken: tokenInput.value.trim() }),
+        });
+        const data = await res.json().catch(() => ({}));
+        const result = res.ok ? describeState(data) : {variant: 'danger', message: data.error || 'Validation failed.'};
+        updateScanResult(result.variant, result.message);
+        if(res.ok && data.state === 'checked_in') {
+          tokenInput.value = '';
+        }
+      }catch(err){
+        console.error(err);
+        updateScanResult('danger', 'Network error while validating ticket.');
+      }finally{
+        if(submitBtn) submitBtn.disabled = false;
+      }
+    });
+  }
+
+  // Image form
+  const qrImageForm = document.getElementById('qrImageForm');
+  if(qrImageForm && organizerId && eventId){
+    qrImageForm.addEventListener('submit', async (evt) => {
+      evt.preventDefault();
+      const fileInput = document.getElementById('qrImageInput');
+      if(!fileInput?.files?.length){
+        updateScanResult('danger', 'Please choose an image containing the QR code.');
+        return;
+      }
+      const submitBtn = qrImageForm.querySelector('button[type="submit"]');
+      if(submitBtn) submitBtn.disabled = true;
+      const formData = new FormData();
+      formData.append('image', fileInput.files[0]);
+      try{
+        const res = await fetch(`/organizers/${organizerId}/events/${eventId}/scan-image`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+          },
+          body: formData,
+        });
+        const data = await res.json().catch(() => ({}));
+        const result = res.ok ? describeState(data) : {variant: 'danger', message: data.error || 'Image scan failed.'};
+        updateScanResult(result.variant, result.message);
+        if(res.ok && data.state === 'checked_in') {
+          fileInput.value = '';
+        }
+      }catch(err){
+        console.error(err);
+        updateScanResult('danger', 'Network error while scanning QR image.');
+      }finally{
+        if(submitBtn) submitBtn.disabled = false;
+      }
     });
   }
 });

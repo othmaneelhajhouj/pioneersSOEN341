@@ -1,7 +1,7 @@
 # Event Filtering
 
 ## Overview
-The events dashboard now has **client-side filtering** - filters work instantly without reloading the page!
+The events dashboard has **client-side filtering** - filters work instantly without reloading the page!
 
 ### Data Attributes
 Each event card has data attributes that JavaScript uses for filtering:
@@ -63,13 +63,6 @@ filteredEvents.sort((a, b) => {
 filteredEvents.forEach(card => card.style.display = '');
 ```
 
-## Performance
-
-- ✅ **Fast** - No server request needed
-- ✅ **Instant** - Updates as you type
-- ✅ **Smooth** - No page reload
-- ✅ **Efficient** - Only manipulates DOM once per filter change
-
 ## Edge Cases Handled
 
 1. **No results** - Shows "No events match your filters" message
@@ -98,10 +91,3 @@ resetButton.addEventListener('click', resetFilters);
 - Gets default values from `data-default` attributes
 - Resets all inputs
 - Triggers filter function
-
-## Future Enhancements 
-1. **Date range filter** - Filter by start/end dates
-2. **Price range filter** - Filter by ticket price
-3. **Save filters** - Remember user's filter preferences
-4. **URL parameters** - Share filtered view via link
-5. **Advanced search** - Tags, categories, etc.

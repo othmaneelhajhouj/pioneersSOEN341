@@ -6,6 +6,7 @@
  */
 
 const { MESSAGES } = require('../utils/constants');
+const { wantsJson } = require('../utils/validation');
 
 /**
  * Creates a middleware function that checks organizer permissions
@@ -30,7 +31,33 @@ function checkOrganizerPermissions(options = {}) {
 
     // Deny access if no organizerId found
     if (!organizerId) {
-      return res.status(403).json({ error: MESSAGES.UNAUTHORIZED });
+      if (wantsJson(req)) return res.status(403).json({ error: MESSAGES.UNAUTHORIZED });
+      return res.status(403).send(MESSAGES.UNAUTHORIZED);
+    }
+
+    if (!req.user) {
+      if (wantsJson(req)) return res.status(401).json({ error: "Authentication required." });
+      return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl || "/")}`);
+    }
+
+    if (req.user.role === "admin") {
+      req.organizerId = organizerId;
+      return next();
+    }
+
+    if (req.user.role !== "organizer") {
+      if (wantsJson(req)) return res.status(403).json({ error: "Organizer access required." });
+      return res.status(403).send("Organizer access required.");
+    }
+
+    if (req.user.organizerStatus !== "approved") {
+      if (wantsJson(req)) return res.status(403).json({ error: "Organizer approval required." });
+      return res.status(403).send("Organizer approval required.");
+    }
+
+    if (req.user.id !== organizerId) {
+      if (wantsJson(req)) return res.status(403).json({ error: "You cannot manage another organizer's events." });
+      return res.status(403).send("You cannot manage another organizer's events.");
     }
 
     // Attach organizerId to request for use in route handlers

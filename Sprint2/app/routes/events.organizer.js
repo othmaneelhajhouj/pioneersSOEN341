@@ -39,4 +39,7 @@ router.patch('/:organizerId/events/:eventId/unpublish', eventsController.event_u
 // Delete an event permanently
 router.delete('/:organizerId/events/:eventId', eventsController.event_delete);
 
+// Export attendees CSV
+router.get('/:organizerId/events/:eventId/attendees.csv', eventsController.event_export_attendees);
+
 module.exports = router;

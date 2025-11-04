@@ -10,6 +10,9 @@ const morgan = require('morgan');
 const { PrismaClient, OrganizerStatus } = require("generated-prisma/client");
 const crypto = require("crypto");
 const QRCode = require('qrcode');
+const {
+  findSession,
+} = require("./lib/auth");
 
 //ATTENTION: these requires will only work after you run "npm run build" once to create the /dist/ folder containing compiled JS files
 const {adminOrganizers} = require("./dist/routes/adminOrganizers");
@@ -23,6 +26,7 @@ const {organizerScan} = require('./dist/routes/organizerScan');
 
 const {SERVER_PORT} = require('./utils/constants');
 const app = express();
+const secureCookies = process.env.NODE_ENV === "production";
 
 // ==================== MIDDLEWARE ====================
 // Serve static files (CSS, JS, images) from the 'public' directory
@@ -41,11 +45,77 @@ app.use(morgan('dev'));
 app.set('view engine', 'ejs');
 app.set("views", path.join(__dirname, "views"));
 
-//Temp auth to pass middleware (adminOnly for now), replace with real auth later
-app.use((req, _res, next) => {
-    req.user = {id: 'agezl65e1mhg8it7qt7bft5f', role: 'admin'};
-    next();
+function parseCookies(header) {
+  if (!header) return {};
+  return header.split(";").reduce((acc, part) => {
+    const index = part.indexOf("=");
+    if (index === -1) return acc;
+    const key = part.slice(0, index).trim();
+    const value = decodeURIComponent(part.slice(index + 1).trim());
+    if (key) acc[key] = value;
+    return acc;
+  }, {});
+}
+
+function getSessionToken(req) {
+  const cookies = parseCookies(req.headers.cookie || "");
+  return cookies.session || null;
+}
+
+function wantsJson(req) {
+  const accept = req.headers.accept || "";
+  return typeof accept === "string" && accept.includes("application/json");
+}
+
+app.use((req, res, next) => {
+  res.locals.currentUser = null;
+  const token = getSessionToken(req);
+  if (!token) {
+    return next();
+  }
+
+  findSession(token)
+    .then((session) => {
+      if (!session) {
+        res.clearCookie("session", {
+          path: "/",
+          sameSite: "lax",
+          secure: secureCookies,
+          httpOnly: true,
+        });
+        return next();
+      }
+      const user = session.user;
+      req.sessionToken = token;
+      req.session = {
+        id: session.id,
+        expiresAt: session.expiresAt,
+      };
+      req.user = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        organizerStatus: user.organizerStatus || undefined,
+      };
+      res.locals.currentUser = req.user;
+      return next();
+    })
+    .catch((err) => {
+      console.error("Session lookup failed", err);
+      if (wantsJson(req)) {
+        return res.status(500).json({ error: "Authentication check failed." });
+      }
+      return res.status(500).send("Authentication check failed.");
+    });
 });
+
+// Authentication routes
+app.use("/", require("./routes/auth"));
+app.use("/", require("./routes/home"));
+app.use("/", require("./routes/profile"));
+app.use("/", require("./routes/myEvents"));
 
 // Public event routes (for students viewing events)
 app.use("/events", require("./routes/events.public"));

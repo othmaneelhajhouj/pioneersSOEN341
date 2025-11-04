@@ -265,15 +265,98 @@ const event_details_student = async (req, res) => {
         _count: { select: { tickets: true } },
       }
     });
+
+    const accepts = (req.headers.accept || "").toLowerCase();
+    const prefersHtml = accepts.includes("text/html") || accepts.includes("*/*");
     
     if (!event) {
-      return res.status(404).json({ error: MESSAGES.EVENT_NOT_FOUND });
+      if (!prefersHtml && wantsJson(req)) {
+        return res.status(404).json({ error: MESSAGES.EVENT_NOT_FOUND });
+      }
+      return res.status(404).render("student/show", { loadError: true });
     }
-    
-    res.json(event);
+
+    const ticketsClaimed = event._count?.tickets ?? 0;
+    const capacity = Number.isFinite(event.capacity) ? event.capacity : 0;
+    const remaining = Math.max(capacity - ticketsClaimed, 0);
+    const isFull = remaining <= 0;
+
+    let ticket = null;
+    if (req.user) {
+      ticket = await prisma.ticket.findFirst({
+        where: { eventId: event.id, userId: req.user.id },
+        select: {
+          id: true,
+          status: true,
+          claimedAt: true,
+          usedAt: true,
+        },
+      });
+    }
+
+    const canClaim =
+      !!req.user &&
+      req.user.role === "student" &&
+      !ticket &&
+      !isFull;
+
+    const formatDate = (value) => {
+      if (!value) return 'Unknown date';
+      return new Date(value).toLocaleDateString(undefined, {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    };
+
+    const formatTime = (value) => {
+      if (!value) return '';
+      return new Date(value).toLocaleTimeString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    };
+
+    const formatted = {
+      startsAt: formatDate(event.startsAt),
+      endsAt: formatDate(event.endsAt),
+      startsAtTime: formatTime(event.startsAt),
+      endsAtTime: formatTime(event.endsAt),
+    };
+
+    if (!prefersHtml && wantsJson(req)) {
+      return res.json({
+        event,
+        stats: {
+          ticketsClaimed,
+          capacity,
+          remaining,
+          isFull,
+        },
+        ticket,
+        canClaim,
+      });
+    }
+
+    return res.render("student/show", {
+      event,
+      stats: {
+        ticketsClaimed,
+        capacity,
+        remaining,
+        isFull,
+      },
+      ticket,
+      canClaim,
+      formatted,
+      loadError: false,
+    });
+
   } catch (error) {
     console.error('Error fetching event details:', error);
-    res.status(500).json({ error: "Failed to fetch event details" });
+    if (wantsJson(req)) return res.status(500).json({ error: "Failed to fetch event details" });
+    return res.status(500).render("student/show", {loadError: true});
   }
 };
 
@@ -287,14 +370,86 @@ const event_index_organizer = async (req, res) => {
     const organizerId = req.organizerId;
     const events = await prisma.event.findMany({
       where: { organizerId },
-      include: { _count: { select: { tickets: true } } },
+      include: {
+        tickets: { select: { status: true } },
+        _count: { select: { tickets: true } },
+      },
       orderBy: { createdAt: 'desc' }
     });
 
-    return res.render("organizer/index", { events, organizerId });
-  } catch (error) {
+
+    const totals = {
+      publishedCount: 0,
+      draftCount: 0,
+      ticketsSoldTotal: 0,
+      capacityTotal: 0,
+      checkedInTotal: 0,
+    };
+
+    const normalizedEvents = events.map((event) => {
+      const { tickets, ...rest } = event;
+      const capacity = Number.isFinite(event.capacity) ? event.capacity : 0;
+      const ticketsSold = event._count?.tickets ?? 0;
+      const checkedIn = tickets.filter((ticket) => ticket.status === 'used').length;
+      const remaining = Math.max(capacity - ticketsSold, 0);
+      const utilization = capacity ? Math.round((ticketsSold / capacity) * 100) : 0;
+      const attendanceRate = ticketsSold ? Math.round((checkedIn / ticketsSold) * 100) : 0;
+
+      totals.ticketsSoldTotal += ticketsSold;
+      totals.capacityTotal += capacity;
+      totals.checkedInTotal += checkedIn;
+      if (event.published) {
+        totals.publishedCount += 1;
+      } else {
+        totals.draftCount += 1;
+      }
+
+      return {
+        ...rest,
+        capacityValue: capacity,
+        ticketsSold,
+        checkedInCount: checkedIn,
+        remaining,
+        utilization,
+        attendanceRate,
+      };
+    });
+
+    const summary = {
+      ...totals,
+      utilizationTotal: totals.capacityTotal
+        ? Math.round((totals.ticketsSoldTotal / totals.capacityTotal) * 100)
+        : 0,
+      attendanceRateTotal: totals.ticketsSoldTotal
+        ? Math.round((totals.checkedInTotal / totals.ticketsSoldTotal) * 100)
+        : 0,
+    };
+
+    return res.render('organizer/index', {
+      events: normalizedEvents,
+      organizerId,
+      summary,
+    });
+
+    } catch (error) {
     console.error('Error fetching organizer events:', error);
-    res.status(500).json({ error: 'Failed to fetch your events' });
+    if (wantsJson(req)) {
+      return res.status(500).json({ error: 'Failed to fetch your events' });
+    }
+    return res.status(500).render('organizer/index', {
+      events: [],
+      organizerId: req.organizerId,
+      summary: {
+        publishedCount: 0,
+        draftCount: 0,
+        ticketsSoldTotal: 0,
+        capacityTotal: 0,
+        checkedInTotal: 0,
+        utilizationTotal: 0,
+        attendanceRateTotal: 0,
+      },
+      loadError: true,
+    });
   }
 };
 
@@ -351,10 +506,32 @@ const event_details_organizer = async (req, res) => {
     if (isJsonRequest) {
       return res.json(event);
     }
-    
+        
+    const ticketsSold = event._count?.tickets ?? 0;
+    const capacity = Number.isFinite(event.capacity) ? event.capacity : 0;
+    const checkedIn = event.tickets.filter((ticket) => ticket.status === 'used').length;
+    const remaining = Math.max(capacity - ticketsSold, 0);
+    const utilization = capacity ? Math.round((ticketsSold / capacity) * 100) : 0;
+    const attendanceRate = ticketsSold ? Math.round((checkedIn / ticketsSold) * 100) : 0;
+    const revenue =
+      event.type === 'paid' && typeof event.price === 'number'
+        ? (event.price / 100) * ticketsSold
+        : null;
+
+    const analytics = {
+      ticketsSold,
+      capacity,
+      remaining,
+      utilization,
+      checkedIn,
+      attendanceRate,
+      revenue,
+    };
+
     return res.render("organizer/show", {
       organizerId,
       event,
+      analytics,
       errors: [],
       flash: req.query.created ? MESSAGES.EVENT_CREATED : null,
     });
@@ -370,6 +547,80 @@ const event_details_organizer = async (req, res) => {
       event: null,
       errors: [MESSAGES.SERVER_ERROR],
     });
+  }
+};
+
+/**
+ * GET /organizers/:organizerId/events/:eventId/attendees.csv
+ */
+const event_export_attendees = async (req, res) => {
+  try {
+    const organizerId = req.organizerId;
+    const eventId = req.params.eventId;
+    const isAdmin = req.user?.role === "admin";
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: {
+        id: true,
+        title: true,
+        organizerId: true,
+        tickets: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: { claimedAt: "asc" },
+        },
+      },
+    });
+
+    if (!event || (!isAdmin && event.organizerId !== organizerId)) {
+      if (wantsJson(req)) return res.status(404).json({ error: MESSAGES.EVENT_NOT_FOUND });
+      return res.status(404).send(MESSAGES.EVENT_NOT_FOUND);
+    }
+
+    const escapeCsv = (value) => {
+      const str = value === null || value === undefined ? '' : String(value);
+      if (/[",\r\n]/.test(str)) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const toIso = (value) => (value ? new Date(value).toISOString() : '');
+
+    const header = ["Ticket ID", "First Name", "Last Name", "Email", "Status", "Claimed At", "Used At", "QR Token"];
+    const rows = event.tickets.map((ticket) => [
+      ticket.id,
+      ticket.user?.firstName || "",
+      ticket.user?.lastName || "",
+      ticket.user?.email || "",
+      ticket.status,
+      toIso(ticket.claimedAt),
+      toIso(ticket.usedAt),
+      ticket.qrToken || "",
+    ]);
+
+    const csv = [header, ...rows]
+      .map((row) => row.map(escapeCsv).join(","))
+      .join("\r\n");
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="attendees-${event.id}.csv"`,
+    );
+    return res.status(200).send('\ufeff' + csv);
+  } catch (error) {
+    console.error("CSV export failed:", error);
+    if (wantsJson(req)) return res.status(500).json({ error: MESSAGES.SERVER_ERROR });
+    return res.status(500).send(MESSAGES.SERVER_ERROR);
   }
 };
 
@@ -559,6 +810,7 @@ module.exports = {
   event_new_form,
   event_details_student,
   event_details_organizer,
+  event_export_attendees,
   event_create,
   event_delete,
   event_publish,
