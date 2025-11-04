@@ -73,7 +73,7 @@ organizerScan.post("/organizers/:organizerId/events/:eventId/scan",async(req: Re
         });
 
         if(!ticket) {
-            return res.status(404).json({ok: false, state: "not_found"});
+            return res.status(404).json({ok: false, state: "not_found", error: "No ticket matched that QR code."});
         }
 
         if(ticket.status === "used") {
@@ -129,7 +129,7 @@ organizerScan.post("/organizers/:organizerId/events/:eventId/scan-image", upload
         });
 
         if(!ticket){
-            return res.status(404).json({ok: false, state: "not_found"});
+            return res.status(404).json({ok: false, state: "not_found", error: "No ticket matched that QR code."});
         }
 
         if(ticket.status === "used") {

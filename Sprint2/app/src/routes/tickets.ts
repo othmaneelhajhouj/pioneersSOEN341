@@ -51,8 +51,13 @@ tickets.post("/events/:id/tickets/claim", async (req: Request, res: Response) =>
 //GET /tickets/:id/ : return caller's ticket details (owner/admin)
 tickets.get("/tickets/:id", async(req: Request, res: Response) => {
     try {
+        const acceptHeader = (req.headers.accept || "").toLowerCase();
+        const prefersHtml = acceptHeader.includes("text/html") || acceptHeader.includes("*/*");
         if(!req.user){
-            return res.status(401).json({error: "Authentication required."});
+            if(!prefersHtml && wantsJson(req)){
+                return res.status(401).json({error: "Authentication required."});
+            }
+            return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl || `/tickets/${req.params.id}`)}`);
         }
         const ticketId = req.params.id;
         const isAdmin = req.user.role === "admin";
@@ -80,12 +85,25 @@ tickets.get("/tickets/:id", async(req: Request, res: Response) => {
         });
 
         if(!ticket){
-            return res.status(404).json({error: "Ticket not found"});
+            if(!prefersHtml && wantsJson(req)){
+                return res.status(404).json({error: "Ticket not found"});
+            }
+            return res.status(404).render("student/ticket", {loadError: true, ticket: null, isAdmin});
         }
 
-        return res.json({ticket});
+        if(!prefersHtml && wantsJson(req)) {
+            return res.json({ticket});
+        }
+        return res.render("student/ticket", {
+            ticket,
+            loadError: false,
+            isAdmin,
+        });
     } catch (e) {
         console.error("Get ticket failed:", e);
+        if(!wantsJson(req)){
+            return res.status(500).render("student/ticket", {loadError: true, ticket: null, isAdmin: req.user?.role === "admin"});
+        }
         return res.status(500).json({error: "Server error."});
     }
 });
