@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Campus Events</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <%- include('../partials/nav', { active: 'home', injectStyles: true }) %>
+</head>
+<body>
+<main class="container py-5 text-center">
+  <section class="mb-4">
+    <h1 class="display-5 fw-semibold mb-3">Welcome to Campus Events</h1>
+    <p class="text-secondary mb-4">
+      Browse upcoming activities, claim your ticket, or organize something new for the community.
+    </p>
+    <%
+      const hasApprovedOrganizer = currentUser && currentUser.role === 'organizer' && currentUser.organizerStatus === 'approved';
+    %>
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+      <a href="/events" class="btn btn-primary btn-sm px-4">Browse Events</a>
+      <% if (currentUser) { %>
+        <a href="<%= hasApprovedOrganizer ? `/organizers/${currentUser.id}/events` : '/profile' %>" class="btn btn-outline-light btn-sm px-4">
+          <%= hasApprovedOrganizer ? 'My Events' : 'My Profile' %>
+        </a>
+      <% } else { %>
+        <a href="/register" class="btn btn-outline-light btn-sm px-4">Create Account</a>
+      <% } %>
+    </div>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h5 mb-3">Upcoming Events</h2>
+    <% if (!upcomingEvents.length) { %>
+      <p class="text-secondary mb-0">No events published yet. Check back soon.</p>
+    <% } else { %>
+      <div class="row g-3 justify-content-center">
+        <% upcomingEvents.forEach(function(ev){ %>
+          <div class="col-12 col-md-6 col-lg-4">
+            <div class="card bg-dark border-secondary h-100">
+              <div class="card-body">
+                <h3 class="h6 mb-2"><%= ev.title %></h3>
+                <p class="small text-secondary mb-1">
+                  <i class="fa fa-calendar me-1"></i><%= ev.startsAtFriendly %>
+                </p>
+                <p class="small text-secondary mb-3">
+                  <i class="fa fa-map-marker-alt me-1"></i><%= ev.location %>
+                </p>
+                <a href="/events/<%= ev.id %>" class="btn btn-outline-light btn-sm">View Details</a>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </section>
+</main>
+<%- include('../partials/footer') %>
+</body>
+</html>

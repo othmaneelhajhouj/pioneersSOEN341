@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= loadError ? 'Event Not Found' : event.title %> | Campus Events</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <%- include('../partials/nav', { active: 'events', injectStyles: true }) %>
+</head>
+<body>
+<main class="container py-5" style="max-width:720px;">
+  <% if (typeof loadError !== 'undefined' && loadError) { %>
+    <div class="alert alert-warning">
+      We couldn't find that event. It may have been removed or unpublished.
+    </div>
+  <% } else { %>
+    <%
+      const organizerName = event.organizer
+        ? [event.organizer.firstName, event.organizer.lastName].filter(Boolean).join(' ') || 'Campus Organizer'
+        : 'Campus Organizer';
+    %>
+    <article class="card bg-dark border-secondary shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+          <div>
+            <h1 class="h3 mb-2"><%= event.title %></h1>
+            <p class="text-secondary mb-3">
+              Hosted by <%= organizerName %>
+            </p>
+          </div>
+          <a href="/events/<%= event.id %>/ics" class="btn btn-outline-light btn-sm">
+            <i class="fa-solid fa-calendar-plus me-1"></i>Add to calendar
+          </a>
+        </div>
+
+        <dl class="row gy-3 mb-4">
+          <dt class="col-sm-4 text-secondary">When</dt>
+          <dd class="col-sm-8 mb-0">
+            <div><%= formatted.startsAt %> at <%= formatted.startsAtTime %></div>
+            <div class="text-secondary small">Ends <%= formatted.endsAt %> at <%= formatted.endsAtTime %></div>
+          </dd>
+          <dt class="col-sm-4 text-secondary">Type</dt>
+          <dd class="col-sm-8 mb-0">
+            <span class="badge <%= event.type === 'paid' ? 'bg-danger' : 'bg-success' %> text-uppercase">
+              <%= event.type === 'paid' ? 'Paid' : 'Free' %>
+            </span>
+            <% if (event.type === 'paid' && typeof event.price === 'number') { %>
+              <span class="small text-secondary ms-2">Approx. $<%= (event.price / 100).toFixed(2) %></span>
+            <% } %>
+          </dd>
+
+          <dt class="col-sm-4 text-secondary">Where</dt>
+          <dd class="col-sm-8 mb-0"><%= event.location %></dd>
+
+          <dt class="col-sm-4 text-secondary">Capacity</dt>
+          <dd class="col-sm-8 mb-0">
+            <span><%= stats.capacity %> total · <%= stats.ticketsClaimed %> claimed</span>
+            <% if (stats.remaining > 0) { %>
+              <span class="badge bg-success ms-2"><%= stats.remaining %> left</span>
+            <% } else { %>
+              <span class="badge bg-secondary ms-2">Sold out</span>
+            <% } %>
+          </dd>
+        </dl>
+
+        <section class="mb-4">
+          <h2 class="h5">About</h2>
+          <p class="text-secondary"><%= event.description %></p>
+        </section>
+
+        <section class="bg-dark border rounded p-3">
+          <% if (ticket) { %>
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+              <div>
+                <h3 class="h6 mb-1 text-success"><i class="fa-solid fa-circle-check me-2"></i>You're in!</h3>
+                <p class="small text-secondary mb-0">
+                  Ticket claimed on <%= ticket.claimedAt ? new Date(ticket.claimedAt).toLocaleString() : '—' %>.
+                  <% if (ticket.usedAt) { %>
+                    Checked in on <%= new Date(ticket.usedAt).toLocaleString() %>.
+                  <% } %>
+                </p>
+              </div>
+              <div class="d-flex flex-column flex-md-row align-items-center gap-2">
+                <a href="/tickets/<%= ticket.id %>" class="btn btn-outline-light btn-sm">View ticket</a>
+                <a href="/tickets/<%= ticket.id %>/qr?size=256" target="_blank" rel="noopener" class="btn btn-primary btn-sm">
+                  Show QR
+                </a>
+              </div>
+            </div>
+            <div class="mt-3 text-center">
+              <img
+                src="/tickets/<%= ticket.id %>/qr?size=220"
+                alt="QR code for your ticket"
+                width="220"
+                height="220"
+                class="img-fluid rounded border border-secondary"
+              />
+              <p class="small text-secondary mt-2 mb-0">Have this code ready when you arrive.</p>
+            </div>
+          <% } else if (!currentUser) { %>
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+              <div>
+                <h3 class="h6 mb-1">Want to attend?</h3>
+                <p class="small text-secondary mb-0">Login or create an account to claim your ticket.</p>
+              </div>
+              <a href="/login?next=<%= encodeURIComponent('/events/' + event.id) %>" class="btn btn-primary btn-sm">Login to claim</a>
+            </div>
+          <% } else if (stats.isFull) { %>
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+              <div>
+                <h3 class="h6 mb-1 text-secondary"><i class="fa-solid fa-circle-info me-2"></i>Sold out</h3>
+                <p class="small text-secondary mb-0">All tickets have been claimed.</p>
+              </div>
+            </div>
+          <% } else if (canClaim) { %>
+            <form method="post" action="/events/<%= event.id %>/tickets/claim" class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+              <div>
+                <h3 class="h6 mb-1">Ready to join?</h3>
+                <p class="small text-secondary mb-0">Claim a ticket to add this to your events.</p>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm px-4">Claim ticket</button>
+            </form>
+          <% } else { %>
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+              <div>
+                <h3 class="h6 mb-1 text-secondary"><i class="fa-solid fa-circle-info me-2"></i>Not available</h3>
+                <p class="small text-secondary mb-0">Only students can claim tickets for events.</p>
+              </div>
+            </div>
+          <% } %>
+        </section>
+      </div>
+    </article>
+  <% } %>
+</main>
+<%- include('../partials/footer') %>
+</body>
+</html>

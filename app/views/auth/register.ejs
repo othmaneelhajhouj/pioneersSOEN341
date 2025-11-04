@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Create Account</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <%- include('../partials/nav', { active: 'register', injectStyles: true }) %>
+</head>
+<body>
+<main class="container py-5" style="max-width:640px;">
+  <h1 class="mb-4 text-center">Join Campus Events</h1>
+  <% if (Array.isArray(errors) && errors.length) { %>
+    <div class="alert alert-danger">
+      <ul class="mb-0">
+        <% errors.forEach(function(e){ %>
+          <li><%= e %></li>
+        <% }) %>
+      </ul>
+    </div>
+  <% } %>
+  <form method="post" action="/register" class="card shadow-sm">
+    <div class="card-body p-4">
+      <div class="mb-3">
+        <label for="register-firstName" class="form-label">First name</label>
+        <input
+          type="text"
+          class="form-control"
+          id="register-firstName"
+          name="firstName"
+          value="<%= (values && values.firstName) ? values.firstName : '' %>"
+          required
+          autocomplete="given-name"
+        />
+      </div>
+      <div class="mb-3">
+        <label for="register-lastName" class="form-label">Last name</label>
+        <input
+          type="text"
+          class="form-control"
+          id="register-lastName"
+          name="lastName"
+          value="<%= (values && values.lastName) ? values.lastName : '' %>"
+          autocomplete="family-name"
+        />
+      </div>
+      <div class="mb-3">
+        <label for="register-email" class="form-label">Email</label>
+        <input
+          type="email"
+          class="form-control"
+          id="register-email"
+          name="email"
+          value="<%= (values && values.email) ? values.email : '' %>"
+          required
+          autocomplete="email"
+        />
+      </div>
+      <div class="mb-3">
+        <label for="register-password" class="form-label">Password</label>
+        <input
+          type="password"
+          class="form-control"
+          id="register-password"
+          name="password"
+          required
+          minlength="8"
+          autocomplete="new-password"
+        />
+        <div class="form-text">At least 8 characters.</div>
+      </div>
+      <div class="d-flex justify-content-between align-items-center">
+        <a href="/login">Already have an account?</a>
+        <button type="submit" class="btn btn-primary">Create account</button>
+      </div>
+    </div>
+  </form>
+</main>
+<%- include('../partials/footer') %>
+</body>
+</html>
