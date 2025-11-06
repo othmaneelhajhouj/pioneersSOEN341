@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <title>Manage Organizers - Admin</title>
+    <title>Organizer Requests - Admin</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <%- include('../partials/styles') %>
 </head>
 <body>
 <%
-const crumbs = [{label:'Admin', href:'/admin/dashboard'},{label:'Organizers'}];
+const crumbs = [{label:'Admin', href:'/admin/dashboard'},{label:'Organizer Requests'}];
 const heroTools = `
   <div class="filters-shell">
     <div class="filters-shell__row filters-shell__row--controls">
@@ -25,24 +25,24 @@ const heroTools = `
   </div>`;
 %>
 <%- include('../partials/nav', { active: 'admin:organizers', injectStyles: false, brand: 'Admin Portal', crumbs }) %>
-<%- include('../partials/hero', { title: 'Organizer Management', subtitle: 'Review applications and manage organizer permissions', heroTools }) %>
+<%- include('../partials/hero', { title: 'Organizer Requests', subtitle: 'Review and approve organizer applications', heroTools }) %>
 
 <main class="container" style="padding-bottom:70px;">
-    <div class="section-title u-section-title">Organizers (<span id="organizerCount">0</span>)</div>
+    <div class="section-title u-section-title">Applications (<span id="requestCount">0</span>)</div>
 
     <!-- Loading State -->
     <div class="row-card" id="loadingState" style="text-align:center; padding:26px">
-        <div class="o-title">Loading organizers...</div>
+        <div class="o-title">Loading applications...</div>
     </div>
 
     <!-- Empty State -->
     <div class="row-card hidden" id="emptyState" style="text-align:center; padding:26px">
-        <div class="o-title" style="margin-bottom:8px">No organizers found</div>
-        <div class="o-sub">No organizers match the current filter</div>
+        <div class="o-title" style="margin-bottom:8px">No applications found</div>
+        <div class="o-sub">No applications match the current filter</div>
     </div>
 
-    <!-- Organizers List -->
-    <section style="display:grid; gap:14px" id="organizersList"></section>
+    <!-- Requests List -->
+    <section style="display:grid; gap:14px" id="requestsList"></section>
 
     <!-- Load More -->
     <div class="hidden" id="loadMoreContainer" style="margin-top:20px; text-align:center">
@@ -52,7 +52,7 @@ const heroTools = `
     </div>
 </main>
 
-<!-- Decision Modal (Approve/Deny/Revoke) -->
+<!-- Decision Modal -->
 <div class="modal-backdrop hidden" id="decisionModal" aria-hidden="true" role="dialog" aria-modal="true">
     <div class="modal-panel" role="document">
         <div class="modal-header">
@@ -92,62 +92,16 @@ const heroTools = `
     </div>
 </div>
 
-<!-- Role Management Modal -->
-<div class="modal-backdrop hidden" id="roleModal" aria-hidden="true" role="dialog" aria-modal="true">
-    <div class="modal-panel" role="document">
-        <div class="modal-header">
-            <div class="modal-title">
-                <i class="fa-solid fa-user-gear"></i> Change User Role
-            </div>
-            <button type="button" class="modal-close" data-close-modal aria-label="Close">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-        <form id="roleForm" class="modal-body">
-            <input type="hidden" id="roleUserId" />
-            <input type="hidden" id="roleCurrentRole" />
-
-            <div class="o-sub" style="margin-bottom:16px; padding:12px; background: var(--mix-panel-dim); border-radius:12px">
-                <i class="fa-solid fa-info-circle"></i>
-                Change the role for <b><span id="roleUserName"></span></b>
-            </div>
-
-            <div class="field-group">
-                <label class="label" for="newRole">New Role</label>
-                <select class="select" id="newRole" name="role" required>
-                    <option value="student">Student</option>
-                    <option value="organizer">Organizer</option>
-                    <option value="admin">Admin</option>
-                </select>
-                <div class="helper">
-                    <b>Student:</b> Can browse and register for events<br>
-                    <b>Organizer:</b> Can create and manage events<br>
-                    <b>Admin:</b> Full platform access and moderation
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn ghost" data-close-modal>
-                    <i class="fa-solid fa-xmark"></i> Cancel
-                </button>
-                <button type="submit" class="btn secondary">
-                    <i class="fa-solid fa-save"></i> Update Role
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <div class="toast" id="toast"></div>
 <%- include('../partials/footer') %>
 
 <script>
     let currentStatus = 'pending';
     let currentCursor = null;
-    let organizersData = [];
+    let requestsData = [];
 
-    // Fetch organizers from API
-    async function fetchOrganizers(status, cursor = null, append = false) {
+    // Fetch organizer requests from API
+    async function fetchRequests(status, cursor = null, append = false) {
         try {
             document.getElementById('loadingState').classList.remove('hidden');
 
@@ -159,35 +113,35 @@ const heroTools = `
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.error || 'Failed to fetch organizers');
+                throw new Error(result.error || 'Failed to fetch applications');
             }
 
             if (append) {
-                organizersData = [...organizersData, ...result.data];
+                requestsData = [...requestsData, ...result.data];
             } else {
-                organizersData = result.data;
+                requestsData = result.data;
             }
 
             currentCursor = result.nextCursor;
-            renderOrganizers();
+            renderRequests();
 
         } catch (error) {
-            console.error('Error fetching organizers:', error);
-            showToast('Failed to load organizers', 'error');
+            console.error('Error fetching applications:', error);
+            showToast('Failed to load applications', 'error');
         } finally {
             document.getElementById('loadingState').classList.add('hidden');
         }
     }
 
-    // Render organizers list
-    function renderOrganizers() {
-        const container = document.getElementById('organizersList');
+    // Render requests list
+    function renderRequests() {
+        const container = document.getElementById('requestsList');
         const emptyState = document.getElementById('emptyState');
         const loadMoreContainer = document.getElementById('loadMoreContainer');
 
-        document.getElementById('organizerCount').textContent = organizersData.length;
+        document.getElementById('requestCount').textContent = requestsData.length;
 
-        if (organizersData.length === 0) {
+        if (requestsData.length === 0) {
             container.innerHTML = '';
             emptyState.classList.remove('hidden');
             loadMoreContainer.classList.add('hidden');
@@ -196,9 +150,10 @@ const heroTools = `
 
         emptyState.classList.add('hidden');
 
-        container.innerHTML = organizersData.map(user => {
+        container.innerHTML = requestsData.map(user => {
             const createdDate = user.createdAt ? new Date(user.createdAt) : null;
             const updatedDate = user.updatedAt ? new Date(user.updatedAt) : null;
+            const approvedDate = user.approvedAt ? new Date(user.approvedAt) : null;
 
             // Status badge
             let statusBadge = '';
@@ -217,13 +172,6 @@ const heroTools = `
                     break;
             }
 
-            // Role badge
-            const roleBadge = user.role === 'admin'
-                ? '<span class="chip paid"><i class="fa-solid fa-shield-halved"></i> Admin</span>'
-                : user.role === 'organizer'
-                    ? '<span class="chip free"><i class="fa-solid fa-user-tie"></i> Organizer</span>'
-                    : '<span class="chip free"><i class="fa-solid fa-user"></i> Student</span>';
-
             return `
             <article class="row-card" data-user-id="${user.id}">
                 <div class="event-header">
@@ -232,30 +180,33 @@ const heroTools = `
                 </div>
                 <div class="event-meta">
                     <span><i class="fa-solid fa-envelope"></i> ${escapeHtml(user.email)}</span>
-                    ${createdDate ? `<span><i class="fa-solid fa-calendar-plus"></i> Joined ${createdDate.toLocaleDateString()}</span>` : ''}
-                    ${roleBadge}
+                    ${createdDate ? `<span><i class="fa-solid fa-calendar-plus"></i> Applied ${createdDate.toLocaleDateString()}</span>` : ''}
+                    ${user.organization ? `<span class="chip free"><i class="fa-solid fa-building"></i> ${escapeHtml(user.organization.name)}</span>` : ''}
                 </div>
                 <div class="grid-meta">
                     <div class="event-extra">
-                        ${user.organizerReason ? `
-                            <div class="o-sub"><b>Decision Reason:</b></div>
-                            <div class="helper" style="margin-top:4px; padding:8px; background: var(--mix-panel-dim); border-radius:8px">
-                                ${escapeHtml(user.organizerReason)}
+                        ${user.decisionReason ? `
+                            <div class="o-sub"><b>Admin Decision Reason:</b></div>
+                            <div class="helper" style="margin-top:4px; padding:8px; background: var(--mix-panel-dim); border-radius:8px; border-left: 3px solid var(--accent)">
+                                ${escapeHtml(user.decisionReason)}
                             </div>
-                        ` : '<div class="o-sub"><i>No reason recorded</i></div>'}
+                        ` : '<div class="o-sub"><i>No decision reason recorded</i></div>'}
+                        ${approvedDate ? `
+                            <div class="helper" style="margin-top:8px">
+                                <i class="fa-solid fa-calendar-check"></i> Approved on ${approvedDate.toLocaleDateString()}
+                            </div>
+                        ` : ''}
                     </div>
                     <div class="event-type">
-                        ${user.organization ? `
-                            <div class="helper"><i class="fa-solid fa-building"></i> Organization</div>
-                            <div class="o-sub">${escapeHtml(user.organization.name)}</div>
-                        ` : '<div class="helper">No organization</div>'}
-                        ${updatedDate ? `<div class="helper" style="margin-top:8px">Updated ${updatedDate.toLocaleDateString()}</div>` : ''}
+                        <div class="helper">Request Details</div>
+                        ${updatedDate ? `<div class="o-sub">Last updated ${updatedDate.toLocaleDateString()}</div>` : ''}
+                        ${user.approvedBy ? `
+                            <div class="helper" style="margin-top:8px">
+                                <i class="fa-solid fa-user-check"></i> Approved by admin
+                            </div>
+                        ` : ''}
                     </div>
-                    <div class="event-controls">
-                        <button class="btn ghost" style="width:100%" onclick="openRoleModal('${user.id}', '${escapeHtml(user.name)}', '${user.role}')">
-                            <i class="fa-solid fa-user-gear"></i> Change Role
-                        </button>
-                    </div>
+                    <div class="event-controls"></div>
                     <div class="o-actions">
                         ${user.organizerStatus === 'pending' ? `
                             <button class="btn secondary" onclick="openDecisionModal('${user.id}', 'approved', '${escapeHtml(user.name)}')">
@@ -346,61 +297,15 @@ const heroTools = `
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.error || `Failed to ${action} organizer`);
+                throw new Error(result.error || `Failed to ${action} request`);
             }
 
-            showToast(`Organizer ${action} successfully`, 'success');
+            showToast(`Application ${action} successfully`, 'success');
             document.getElementById('decisionModal').classList.add('hidden');
             currentCursor = null;
-            fetchOrganizers(currentStatus);
+            fetchRequests(currentStatus);
         } catch (error) {
-            console.error(`Error ${action} organizer:`, error);
-            showToast(error.message, 'error');
-        }
-    });
-
-    // Open role modal
-    function openRoleModal(userId, userName, currentRole) {
-        document.getElementById('roleUserId').value = userId;
-        document.getElementById('roleCurrentRole').value = currentRole;
-        document.getElementById('roleUserName').textContent = userName;
-        document.getElementById('newRole').value = currentRole;
-        document.getElementById('roleModal').classList.remove('hidden');
-    }
-
-    // Submit role change
-    document.getElementById('roleForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const userId = document.getElementById('roleUserId').value;
-        const currentRole = document.getElementById('roleCurrentRole').value;
-        const newRole = document.getElementById('newRole').value;
-
-        if (currentRole === newRole) {
-            showToast('No changes made', 'info');
-            document.getElementById('roleModal').classList.add('hidden');
-            return;
-        }
-
-        try {
-            const response = await fetch(`/admin/users/${userId}/role`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ role: newRole })
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Failed to update role');
-            }
-
-            showToast(`User role updated to ${newRole}`, 'success');
-            document.getElementById('roleModal').classList.add('hidden');
-            currentCursor = null;
-            fetchOrganizers(currentStatus);
-        } catch (error) {
-            console.error('Error updating role:', error);
+            console.error(`Error ${action} application:`, error);
             showToast(error.message, 'error');
         }
     });
@@ -418,19 +323,19 @@ const heroTools = `
     document.getElementById('statusFilter').addEventListener('change', (e) => {
         currentStatus = e.target.value;
         currentCursor = null;
-        fetchOrganizers(currentStatus);
+        fetchRequests(currentStatus);
     });
 
     // Refresh button
     document.getElementById('refreshBtn').addEventListener('click', () => {
         currentCursor = null;
-        fetchOrganizers(currentStatus);
+        fetchRequests(currentStatus);
     });
 
     // Load more button
     document.getElementById('loadMoreBtn').addEventListener('click', () => {
         if (currentCursor) {
-            fetchOrganizers(currentStatus, currentCursor, true);
+            fetchRequests(currentStatus, currentCursor, true);
         }
     });
 
@@ -450,7 +355,7 @@ const heroTools = `
     }
 
     // Initial load
-    fetchOrganizers(currentStatus);
+    fetchRequests(currentStatus);
 </script>
 </body>
 </html>

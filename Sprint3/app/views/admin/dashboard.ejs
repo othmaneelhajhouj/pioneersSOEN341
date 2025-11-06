@@ -122,6 +122,34 @@ const crumbs = [{label:'Admin', href:'/admin/dashboard'},{label:'Dashboard'}];
 
         <article class="row-card">
             <div class="event-header">
+                <div class="o-title">User Management</div>
+                <span class="status-chip">
+          <i class="fa-solid fa-users-gear"></i>
+          <span class="status-label">Roles</span>
+        </span>
+            </div>
+            <div class="event-meta">
+                <span><i class="fa-solid fa-user-gear"></i> Change user roles</span>
+                <span><i class="fa-solid fa-search"></i> Search and filter users</span>
+            </div>
+            <div class="grid-meta">
+                <div class="event-extra">
+                    <div class="o-sub">Manage user roles and permissions across the platform (student, organizer, admin)</div>
+                </div>
+                <div class="event-type">
+                    <div class="helper">Role management system</div>
+                </div>
+                <div class="event-controls"></div>
+                <div class="o-actions">
+                    <a class="btn secondary" href="/admin/users-manage">
+                        <i class="fa-solid fa-users"></i> Manage Users
+                    </a>
+                </div>
+            </div>
+        </article>
+
+        <article class="row-card">
+            <div class="event-header">
                 <div class="o-title">Organizations</div>
                 <span class="status-chip">
           <i class="fa-solid fa-building"></i>
@@ -147,6 +175,34 @@ const crumbs = [{label:'Admin', href:'/admin/dashboard'},{label:'Dashboard'}];
                 </div>
             </div>
         </article>
+
+        <article class="row-card">
+            <div class="event-header">
+                <div class="o-title">Analytics & Trends</div>
+                <span class="status-chip">
+          <i class="fa-solid fa-chart-line"></i>
+          <span class="status-label">Insights</span>
+        </span>
+            </div>
+            <div class="event-meta">
+                <span><i class="fa-solid fa-chart-bar"></i> View activity trends</span>
+                <span><i class="fa-solid fa-calendar-range"></i> Analyze date ranges</span>
+            </div>
+            <div class="grid-meta">
+                <div class="event-extra">
+                    <div class="o-sub">Track events, tickets, and redemption rates over time with visual charts</div>
+                </div>
+                <div class="event-type">
+                    <div class="helper">Time-series analytics</div>
+                </div>
+                <div class="event-controls"></div>
+                <div class="o-actions">
+                    <a class="btn secondary" href="/admin/analytics">
+                        <i class="fa-solid fa-chart-line"></i> View Analytics
+                    </a>
+                </div>
+            </div>
+        </article>
     </section>
 </main>
 
@@ -155,7 +211,7 @@ const crumbs = [{label:'Admin', href:'/admin/dashboard'},{label:'Dashboard'}];
 
 <script>
     // Fetch analytics data
-    fetch('/admin/analytics')
+    fetch('/admin/analytics/data')
         .then(res => {
             if (!res.ok) throw new Error('Failed to fetch analytics');
             return res.json();

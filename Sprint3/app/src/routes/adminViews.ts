@@ -27,3 +27,8 @@ adminViews.get("/organizers-manage", adminOnly, (req: Request, res: Response) =>
 adminViews.get("/organizations-manage", adminOnly, (req: Request, res: Response) => {
     res.render("admin/organizations");
 });
+
+// Users' role management page
+adminViews.get("/users-manage", adminOnly, (req: Request, res: Response) => {
+    res.render("admin/roleManagement");
+});

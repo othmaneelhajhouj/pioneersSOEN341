@@ -40,8 +40,24 @@
             <li><a class="dropdown-item" href="/organizers/1/events">Dashboard</a></li>
             <li><a class="dropdown-item" href="/organizers/1/events#new">Quick Create</a></li>
           </ul>
+
         </li>
+          <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle <%= active && active.startsWith('admin') ? 'active fw-semibold' : '' %>" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">Admin</a>
+              <ul class="dropdown-menu dropdown-menu-dark border-secondary shadow" aria-labelledby="adminMenu">
+                  <li><a class="dropdown-item" href="/admin/dashboard"><i class="fa-solid fa-gauge"></i> Dashboard</a></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item" href="/admin/events-manage"><i class="fa-solid fa-calendar-days"></i> Manage Events</a></li>
+                  <li><a class="dropdown-item" href="/admin/organizers-manage"><i class="fa-solid fa-user-tie"></i> Manage Organizers</a></li>
+                  <li><a class="dropdown-item" href="/admin/users-manage"><i class="fa-solid fa-users"></i> Manage Users</a></li>
+                  <li><a class="dropdown-item" href="/admin/organizations-manage"><i class="fa-solid fa-sitemap"></i> Manage Organizations</a></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item" href="/admin/analytics"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
+              </ul>
+          </li>
       </ul>
+
+
       <div class="d-flex ms-lg-3 mt-3 mt-lg-0 gap-2">
         <% if (typeof navActions !== 'undefined' && navActions) { %>
           <%- navActions %>
