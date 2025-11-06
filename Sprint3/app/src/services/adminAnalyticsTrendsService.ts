@@ -3,9 +3,11 @@ import {prisma} from "../db";
 type Point = {period: string; count: number};
 type Buckets = "day" | "week";
 
-function dateExpr(buckets: Buckets , column: string) {
-    return buckets === "day" ? `DATE("${column}")` : `strftime('%Y-%W', "${column}")`           //returns sql snippet of date in days or weeks (formatted Year-Week)
-} 
+function dateExpr(buckets: Buckets, column: string) {
+    return buckets === "day"
+        ? `strftime('%Y-%m-%d', ${column} / 1000, 'unixepoch')`
+        : `strftime('%Y-%W', ${column} / 1000, 'unixepoch')`; //returns sql snippet of date in days or weeks (formatted Year-Week)
+}
 
 interface getTrendsArgs {
     from: Date;
