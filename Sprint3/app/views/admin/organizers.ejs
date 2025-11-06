@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Manage Organizers - Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <%- include('../partials/styles') %>
+</head>
+<body>
+<%
+const crumbs = [{label:'Admin', href:'/admin/dashboard'},{label:'Organizers'}];
+const heroTools = `
+  <div class="filters-shell">
+    <div class="filters-shell__row filters-shell__row--controls">
+      <select class="select filters-bar__select" id="statusFilter">
+        <option value="pending">Pending Applications</option>
+        <option value="approved">Approved</option>
+        <option value="denied">Denied</option>
+        <option value="revoked">Revoked</option>
+      </select>
+      <button class="btn ghost" id="refreshBtn" type="button">
+        <i class="fa-solid fa-arrows-rotate"></i> Refresh
+      </button>
+    </div>
+  </div>`;
+%>
+<%- include('../partials/nav', { active: 'admin:organizers', injectStyles: false, brand: 'Admin Portal', crumbs }) %>
+<%- include('../partials/hero', { title: 'Organizer Management', subtitle: 'Review applications and manage organizer permissions', heroTools }) %>
+
+<main class="container" style="padding-bottom:70px;">
+    <div class="section-title u-section-title">Organizers (<span id="organizerCount">0</span>)</div>
+
+    <!-- Loading State -->
+    <div class="row-card" id="loadingState" style="text-align:center; padding:26px">
+        <div class="o-title">Loading organizers...</div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="row-card hidden" id="emptyState" style="text-align:center; padding:26px">
+        <div class="o-title" style="margin-bottom:8px">No organizers found</div>
+        <div class="o-sub">No organizers match the current filter</div>
+    </div>
+
+    <!-- Organizers List -->
+    <section style="display:grid; gap:14px" id="organizersList"></section>
+
+    <!-- Load More -->
+    <div class="hidden" id="loadMoreContainer" style="margin-top:20px; text-align:center">
+        <button class="btn secondary" id="loadMoreBtn">
+            <i class="fa-solid fa-arrow-down"></i> Load More
+        </button>
+    </div>
+</main>
+
+<!-- Decision Modal (Approve/Deny/Revoke) -->
+<div class="modal-backdrop hidden" id="decisionModal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-panel" role="document">
+        <div class="modal-header">
+            <div class="modal-title" id="decisionModalTitle">
+                <i class="fa-solid fa-user-shield"></i> Update Organizer Status
+            </div>
+            <button type="button" class="modal-close" data-close-modal aria-label="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="decisionForm" class="modal-body">
+            <input type="hidden" id="decisionUserId" />
+            <input type="hidden" id="decisionAction" />
+            <input type="hidden" id="decisionUserName" />
+
+            <div class="o-sub" style="margin-bottom:16px; padding:12px; background: var(--mix-panel-dim); border-radius:12px">
+                <i class="fa-solid fa-info-circle"></i>
+                You are about to <b><span id="actionVerb"></span></b> <b><span id="targetUserName"></span></b>
+            </div>
+
+            <div class="field-group">
+                <label class="label" for="decisionReason">Reason (Optional)</label>
+                <textarea class="field" id="decisionReason" name="reason" rows="4"
+                          placeholder="Provide a reason for this decision..."></textarea>
+                <div class="helper">This reason will be recorded for audit purposes</div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn ghost" data-close-modal>
+                    <i class="fa-solid fa-xmark"></i> Cancel
+                </button>
+                <button type="submit" class="btn secondary" id="decisionSubmitBtn">
+                    <i class="fa-solid fa-check"></i> Confirm
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Role Management Modal -->
+<div class="modal-backdrop hidden" id="roleModal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-panel" role="document">
+        <div class="modal-header">
+            <div class="modal-title">
+                <i class="fa-solid fa-user-gear"></i> Change User Role
+            </div>
+            <button type="button" class="modal-close" data-close-modal aria-label="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="roleForm" class="modal-body">
+            <input type="hidden" id="roleUserId" />
+            <input type="hidden" id="roleCurrentRole" />
+
+            <div class="o-sub" style="margin-bottom:16px; padding:12px; background: var(--mix-panel-dim); border-radius:12px">
+                <i class="fa-solid fa-info-circle"></i>
+                Change the role for <b><span id="roleUserName"></span></b>
+            </div>
+
+            <div class="field-group">
+                <label class="label" for="newRole">New Role</label>
+                <select class="select" id="newRole" name="role" required>
+                    <option value="student">Student</option>
+                    <option value="organizer">Organizer</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <div class="helper">
+                    <b>Student:</b> Can browse and register for events<br>
+                    <b>Organizer:</b> Can create and manage events<br>
+                    <b>Admin:</b> Full platform access and moderation
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn ghost" data-close-modal>
+                    <i class="fa-solid fa-xmark"></i> Cancel
+                </button>
+                <button type="submit" class="btn secondary">
+                    <i class="fa-solid fa-save"></i> Update Role
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<%- include('../partials/footer') %>
+
+<script>
+    let currentStatus = 'pending';
+    let currentCursor = null;
+    let organizersData = [];
+
+    // Fetch organizers from API
+    async function fetchOrganizers(status, cursor = null, append = false) {
+        try {
+            document.getElementById('loadingState').classList.remove('hidden');
+
+            const url = new URL('/admin/organizers', window.location.origin);
+            url.searchParams.set('status', status);
+            if (cursor) url.searchParams.set('cursor', cursor);
+
+            const response = await fetch(url);
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to fetch organizers');
+            }
+
+            if (append) {
+                organizersData = [...organizersData, ...result.data];
+            } else {
+                organizersData = result.data;
+            }
+
+            currentCursor = result.nextCursor;
+            renderOrganizers();
+
+        } catch (error) {
+            console.error('Error fetching organizers:', error);
+            showToast('Failed to load organizers', 'error');
+        } finally {
+            document.getElementById('loadingState').classList.add('hidden');
+        }
+    }
+
+    // Render organizers list
+    function renderOrganizers() {
+        const container = document.getElementById('organizersList');
+        const emptyState = document.getElementById('emptyState');
+        const loadMoreContainer = document.getElementById('loadMoreContainer');
+
+        document.getElementById('organizerCount').textContent = organizersData.length;
+
+        if (organizersData.length === 0) {
+            container.innerHTML = '';
+            emptyState.classList.remove('hidden');
+            loadMoreContainer.classList.add('hidden');
+            return;
+        }
+
+        emptyState.classList.add('hidden');
+
+        container.innerHTML = organizersData.map(user => {
+            const createdDate = user.createdAt ? new Date(user.createdAt) : null;
+            const updatedDate = user.updatedAt ? new Date(user.updatedAt) : null;
+
+            // Status badge
+            let statusBadge = '';
+            switch(user.organizerStatus) {
+                case 'pending':
+                    statusBadge = '<span class="status-chip"><i class="fa-solid fa-clock"></i> Pending</span>';
+                    break;
+                case 'approved':
+                    statusBadge = '<span class="status-chip live"><i class="fa-solid fa-check"></i> Approved</span>';
+                    break;
+                case 'denied':
+                    statusBadge = '<span class="status-chip"><i class="fa-solid fa-ban"></i> Denied</span>';
+                    break;
+                case 'revoked':
+                    statusBadge = '<span class="status-chip"><i class="fa-solid fa-user-slash"></i> Revoked</span>';
+                    break;
+            }
+
+            // Role badge
+            const roleBadge = user.role === 'admin'
+                ? '<span class="chip paid"><i class="fa-solid fa-shield-halved"></i> Admin</span>'
+                : user.role === 'organizer'
+                    ? '<span class="chip free"><i class="fa-solid fa-user-tie"></i> Organizer</span>'
+                    : '<span class="chip free"><i class="fa-solid fa-user"></i> Student</span>';
+
+            return `
+            <article class="row-card" data-user-id="${user.id}">
+                <div class="event-header">
+                    <div class="o-title">${escapeHtml(user.name)}</div>
+                    ${statusBadge}
+                </div>
+                <div class="event-meta">
+                    <span><i class="fa-solid fa-envelope"></i> ${escapeHtml(user.email)}</span>
+                    ${createdDate ? `<span><i class="fa-solid fa-calendar-plus"></i> Joined ${createdDate.toLocaleDateString()}</span>` : ''}
+                    ${roleBadge}
+                </div>
+                <div class="grid-meta">
+                    <div class="event-extra">
+                        ${user.organizerReason ? `
+                            <div class="o-sub"><b>Decision Reason:</b></div>
+                            <div class="helper" style="margin-top:4px; padding:8px; background: var(--mix-panel-dim); border-radius:8px">
+                                ${escapeHtml(user.organizerReason)}
+                            </div>
+                        ` : '<div class="o-sub"><i>No reason recorded</i></div>'}
+                    </div>
+                    <div class="event-type">
+                        ${user.organization ? `
+                            <div class="helper"><i class="fa-solid fa-building"></i> Organization</div>
+                            <div class="o-sub">${escapeHtml(user.organization.name)}</div>
+                        ` : '<div class="helper">No organization</div>'}
+                        ${updatedDate ? `<div class="helper" style="margin-top:8px">Updated ${updatedDate.toLocaleDateString()}</div>` : ''}
+                    </div>
+                    <div class="event-controls">
+                        <button class="btn ghost" style="width:100%" onclick="openRoleModal('${user.id}', '${escapeHtml(user.name)}', '${user.role}')">
+                            <i class="fa-solid fa-user-gear"></i> Change Role
+                        </button>
+                    </div>
+                    <div class="o-actions">
+                        ${user.organizerStatus === 'pending' ? `
+                            <button class="btn secondary" onclick="openDecisionModal('${user.id}', 'approved', '${escapeHtml(user.name)}')">
+                                <i class="fa-solid fa-check"></i> Approve
+                            </button>
+                            <button class="btn danger" onclick="openDecisionModal('${user.id}', 'denied', '${escapeHtml(user.name)}')">
+                                <i class="fa-solid fa-ban"></i> Deny
+                            </button>
+                        ` : ''}
+                        ${user.organizerStatus === 'approved' ? `
+                            <button class="btn danger" onclick="openDecisionModal('${user.id}', 'revoked', '${escapeHtml(user.name)}')">
+                                <i class="fa-solid fa-user-slash"></i> Revoke
+                            </button>
+                        ` : ''}
+                        ${user.organizerStatus === 'denied' || user.organizerStatus === 'revoked' ? `
+                            <button class="btn secondary" onclick="openDecisionModal('${user.id}', 'approved', '${escapeHtml(user.name)}')">
+                                <i class="fa-solid fa-check"></i> Approve
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            </article>
+        `;
+        }).join('');
+
+        // Show/hide load more button
+        if (currentCursor) {
+            loadMoreContainer.classList.remove('hidden');
+        } else {
+            loadMoreContainer.classList.add('hidden');
+        }
+    }
+
+    // Open decision modal
+    function openDecisionModal(userId, action, userName) {
+        document.getElementById('decisionUserId').value = userId;
+        document.getElementById('decisionAction').value = action;
+        document.getElementById('decisionUserName').value = userName;
+        document.getElementById('decisionReason').value = '';
+
+        // Update modal content
+        const titleEl = document.getElementById('decisionModalTitle');
+        const submitBtn = document.getElementById('decisionSubmitBtn');
+        const actionVerb = document.getElementById('actionVerb');
+        const targetUserName = document.getElementById('targetUserName');
+
+        targetUserName.textContent = userName;
+
+        switch(action) {
+            case 'approved':
+                titleEl.innerHTML = '<i class="fa-solid fa-check"></i> Approve Organizer';
+                submitBtn.className = 'btn secondary';
+                submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Approve';
+                actionVerb.textContent = 'approve';
+                break;
+            case 'denied':
+                titleEl.innerHTML = '<i class="fa-solid fa-ban"></i> Deny Application';
+                submitBtn.className = 'btn danger';
+                submitBtn.innerHTML = '<i class="fa-solid fa-ban"></i> Deny';
+                actionVerb.textContent = 'deny';
+                break;
+            case 'revoked':
+                titleEl.innerHTML = '<i class="fa-solid fa-user-slash"></i> Revoke Organizer Status';
+                submitBtn.className = 'btn danger';
+                submitBtn.innerHTML = '<i class="fa-solid fa-user-slash"></i> Revoke';
+                actionVerb.textContent = 'revoke access for';
+                break;
+        }
+
+        document.getElementById('decisionModal').classList.remove('hidden');
+    }
+
+    // Submit decision
+    document.getElementById('decisionForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const userId = document.getElementById('decisionUserId').value;
+        const action = document.getElementById('decisionAction').value;
+        const reason = document.getElementById('decisionReason').value.trim() || undefined;
+
+        try {
+            const response = await fetch(`/admin/organizers/${userId}/${action}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || `Failed to ${action} organizer`);
+            }
+
+            showToast(`Organizer ${action} successfully`, 'success');
+            document.getElementById('decisionModal').classList.add('hidden');
+            currentCursor = null;
+            fetchOrganizers(currentStatus);
+        } catch (error) {
+            console.error(`Error ${action} organizer:`, error);
+            showToast(error.message, 'error');
+        }
+    });
+
+    // Open role modal
+    function openRoleModal(userId, userName, currentRole) {
+        document.getElementById('roleUserId').value = userId;
+        document.getElementById('roleCurrentRole').value = currentRole;
+        document.getElementById('roleUserName').textContent = userName;
+        document.getElementById('newRole').value = currentRole;
+        document.getElementById('roleModal').classList.remove('hidden');
+    }
+
+    // Submit role change
+    document.getElementById('roleForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const userId = document.getElementById('roleUserId').value;
+        const currentRole = document.getElementById('roleCurrentRole').value;
+        const newRole = document.getElementById('newRole').value;
+
+        if (currentRole === newRole) {
+            showToast('No changes made', 'info');
+            document.getElementById('roleModal').classList.add('hidden');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/admin/users/${userId}/role`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: newRole })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to update role');
+            }
+
+            showToast(`User role updated to ${newRole}`, 'success');
+            document.getElementById('roleModal').classList.add('hidden');
+            currentCursor = null;
+            fetchOrganizers(currentStatus);
+        } catch (error) {
+            console.error('Error updating role:', error);
+            showToast(error.message, 'error');
+        }
+    });
+
+    // Close modals
+    document.querySelectorAll('[data-close-modal]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.modal-backdrop').forEach(modal => {
+                modal.classList.add('hidden');
+            });
+        });
+    });
+
+    // Status filter change
+    document.getElementById('statusFilter').addEventListener('change', (e) => {
+        currentStatus = e.target.value;
+        currentCursor = null;
+        fetchOrganizers(currentStatus);
+    });
+
+    // Refresh button
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+        currentCursor = null;
+        fetchOrganizers(currentStatus);
+    });
+
+    // Load more button
+    document.getElementById('loadMoreBtn').addEventListener('click', () => {
+        if (currentCursor) {
+            fetchOrganizers(currentStatus, currentCursor, true);
+        }
+    });
+
+    // Show toast notification
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Initial load
+    fetchOrganizers(currentStatus);
+</script>
+</body>
+</html>

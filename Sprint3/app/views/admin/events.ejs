@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Manage Events - Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <%- include('../partials/styles') %>
+</head>
+<body>
+<%
+const crumbs = [{label:'Admin', href:'/admin/dashboard'},{label:'Events'}];
+const heroTools = `
+  <div class="filters-shell">
+    <div class="filters-shell__row filters-shell__row--controls">
+      <select class="select filters-bar__select" id="statusFilter">
+        <option value="pending">Pending Review</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+      </select>
+      <button class="btn ghost" id="refreshBtn" type="button">
+        <i class="fa-solid fa-arrows-rotate"></i> Refresh
+      </button>
+    </div>
+  </div>`;
+%>
+<%- include('../partials/nav', { active: 'admin:events', injectStyles: false, brand: 'Admin Portal', crumbs }) %>
+<%- include('../partials/hero', { title: 'Event Management', subtitle: 'Review, approve, and moderate platform events', heroTools }) %>
+
+<main class="container" style="padding-bottom:70px;">
+    <div class="section-title u-section-title">Events (<span id="eventCount">0</span>)</div>
+
+    <!-- Loading State -->
+    <div class="row-card" id="loadingState" style="text-align:center; padding:26px">
+        <div class="o-title">Loading events...</div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="row-card hidden" id="emptyState" style="text-align:center; padding:26px">
+        <div class="o-title" style="margin-bottom:8px">No events found</div>
+        <div class="o-sub">No events match the current filter</div>
+    </div>
+
+    <!-- Events List -->
+    <section style="display:grid; gap:14px" id="eventsList"></section>
+
+    <!-- Load More -->
+    <div class="hidden" id="loadMoreContainer" style="margin-top:20px; text-align:center">
+        <button class="btn secondary" id="loadMoreBtn">
+            <i class="fa-solid fa-arrow-down"></i> Load More
+        </button>
+    </div>
+</main>
+
+<!-- Reject Modal -->
+<div class="modal-backdrop hidden" id="rejectModal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-panel" role="document">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa-solid fa-ban"></i> Reject Event</div>
+            <button type="button" class="modal-close" data-close-modal aria-label="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="rejectForm" class="modal-body">
+            <input type="hidden" id="rejectEventId" />
+            <div class="field-group">
+                <label class="label" for="rejectReason">Rejection Reason</label>
+                <textarea class="field" id="rejectReason" name="reason" rows="4"
+                          placeholder="Explain why this event is being rejected..." required></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn ghost" data-close-modal>
+                    <i class="fa-solid fa-xmark"></i> Cancel
+                </button>
+                <button type="submit" class="btn danger">
+                    <i class="fa-solid fa-ban"></i> Reject Event
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<%- include('../partials/footer') %>
+
+<script>
+    let currentStatus = 'pending';
+    let currentCursor = null;
+    let eventsData = [];
+
+    // Fetch events from API
+    async function fetchEvents(status, cursor = null, append = false) {
+        try {
+            document.getElementById('loadingState').classList.remove('hidden');
+
+            const url = new URL('/admin/events', window.location.origin);
+            url.searchParams.set('status', status);
+            if (cursor) url.searchParams.set('cursor', cursor);
+
+            const response = await fetch(url);
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to fetch events');
+            }
+
+            if (append) {
+                eventsData = [...eventsData, ...result.data];
+            } else {
+                eventsData = result.data;
+            }
+
+            currentCursor = result.nextCursor;
+            renderEvents();
+
+        } catch (error) {
+            console.error('Error fetching events:', error);
+            showToast('Failed to load events', 'error');
+        } finally {
+            document.getElementById('loadingState').classList.add('hidden');
+        }
+    }
+
+    // Render events list
+    function renderEvents() {
+        const container = document.getElementById('eventsList');
+        const emptyState = document.getElementById('emptyState');
+        const loadMoreContainer = document.getElementById('loadMoreContainer');
+
+        document.getElementById('eventCount').textContent = eventsData.length;
+
+        if (eventsData.length === 0) {
+            container.innerHTML = '';
+            emptyState.classList.remove('hidden');
+            loadMoreContainer.classList.add('hidden');
+            return;
+        }
+
+        emptyState.classList.add('hidden');
+
+        container.innerHTML = eventsData.map(event => {
+            const startDate = event.startsAt ? new Date(event.startsAt) : null;
+            const endDate = event.endsAt ? new Date(event.endsAt) : null;
+            const createdDate = event.createdAt ? new Date(event.createdAt) : null;
+
+            const statusBadge = event.moderationStatus === 'approved'
+                ? '<span class="status-chip live"><i class="fa-solid fa-check"></i> Approved</span>'
+                : event.moderationStatus === 'rejected'
+                    ? '<span class="status-chip"><i class="fa-solid fa-ban"></i> Rejected</span>'
+                    : '<span class="status-chip"><i class="fa-solid fa-clock"></i> Pending</span>';
+
+            const publishBadge = event.published
+                ? '<span class="chip free"><i class="fa-solid fa-signal"></i> Published</span>'
+                : '<span class="chip paid"><i class="fa-solid fa-eye-slash"></i> Unpublished</span>';
+
+            return `
+            <article class="row-card" data-event-id="${event.id}">
+                <div class="event-header">
+                    <div class="o-title">${escapeHtml(event.title)}</div>
+                    ${statusBadge}
+                </div>
+                <div class="event-meta">
+                    ${startDate ? `<span><i class="fa-regular fa-clock"></i> ${startDate.toLocaleDateString()} ${startDate.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>` : ''}
+                    <span><i class="fa-solid fa-location-dot"></i> ${escapeHtml(event.location)}</span>
+                    ${publishBadge}
+                </div>
+                <div class="grid-meta">
+                    <div class="event-extra">
+                        <div class="o-sub">${escapeHtml(event.description || 'No description')}</div>
+                        ${event.moderationReason ? `<div class="helper" style="margin-top:8px; color: var(--chip-paid)"><i class="fa-solid fa-circle-info"></i> <b>Reason:</b> ${escapeHtml(event.moderationReason)}</div>` : ''}
+                    </div>
+                    <div class="event-type">
+                        ${event.type === 'paid' && event.price
+                ? `<span class="chip paid"><i class="fa-solid fa-dollar-sign"></i> $${(event.price/100).toFixed(2)}</span>`
+                : '<span class="chip free"><i class="fa-solid fa-ticket"></i> Free</span>'}
+                        <div class="helper">Created ${createdDate ? createdDate.toLocaleDateString() : '—'}</div>
+                        ${event.capacity ? `<div class="helper">Capacity: ${event.capacity}</div>` : ''}
+                    </div>
+                    <div class="event-controls">
+                        <div class="helper">Organizer: ${escapeHtml(event.organizer?.name || 'Unknown')}</div>
+                        ${event.organization ? `<div class="helper">Org: ${escapeHtml(event.organization.name)}</div>` : ''}
+                    </div>
+                    <div class="o-actions">
+                        ${event.moderationStatus === 'pending' ? `
+                            <button class="btn secondary" onclick="approveEvent('${event.id}')">
+                                <i class="fa-solid fa-check"></i> Approve
+                            </button>
+                            <button class="btn danger" onclick="openRejectModal('${event.id}')">
+                                <i class="fa-solid fa-ban"></i> Reject
+                            </button>
+                        ` : ''}
+                        ${event.moderationStatus === 'approved' && !event.published ? `
+                            <button class="btn secondary" onclick="publishEvent('${event.id}')">
+                                <i class="fa-solid fa-signal"></i> Publish
+                            </button>
+                        ` : ''}
+                        ${event.published ? `
+                            <button class="btn danger" onclick="unpublishEvent('${event.id}')">
+                                <i class="fa-solid fa-eye-slash"></i> Unpublish
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            </article>
+        `;
+        }).join('');
+
+        // Show/hide load more button
+        if (currentCursor) {
+            loadMoreContainer.classList.remove('hidden');
+        } else {
+            loadMoreContainer.classList.add('hidden');
+        }
+    }
+
+    // Approve event
+    async function approveEvent(eventId) {
+        try {
+            const response = await fetch(`/admin/events/${eventId}/approve`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to approve event');
+            }
+
+            showToast('Event approved successfully', 'success');
+            fetchEvents(currentStatus);
+        } catch (error) {
+            console.error('Error approving event:', error);
+            showToast(error.message, 'error');
+        }
+    }
+
+    // Publish event
+    async function publishEvent(eventId) {
+        try {
+            const response = await fetch(`/admin/events/${eventId}/publish`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to publish event');
+            }
+
+            showToast('Event published successfully', 'success');
+            fetchEvents(currentStatus);
+        } catch (error) {
+            console.error('Error publishing event:', error);
+            showToast(error.message, 'error');
+        }
+    }
+
+    // Unpublish event
+    async function unpublishEvent(eventId) {
+        if (!confirm('Are you sure you want to unpublish this event?')) return;
+
+        try {
+            const response = await fetch(`/admin/events/${eventId}/unpublish`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to unpublish event');
+            }
+
+            showToast('Event unpublished successfully', 'success');
+            fetchEvents(currentStatus);
+        } catch (error) {
+            console.error('Error unpublishing event:', error);
+            showToast(error.message, 'error');
+        }
+    }
+
+    // Open reject modal
+    function openRejectModal(eventId) {
+        document.getElementById('rejectEventId').value = eventId;
+        document.getElementById('rejectReason').value = '';
+        document.getElementById('rejectModal').classList.remove('hidden');
+    }
+
+    // Close modals
+    document.querySelectorAll('[data-close-modal]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.modal-backdrop').forEach(modal => {
+                modal.classList.add('hidden');
+            });
+        });
+    });
+
+    // Reject form submit
+    document.getElementById('rejectForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const eventId = document.getElementById('rejectEventId').value;
+        const reason = document.getElementById('rejectReason').value;
+
+        try {
+            const response = await fetch(`/admin/events/${eventId}/reject`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to reject event');
+            }
+
+            showToast('Event rejected successfully', 'success');
+            document.getElementById('rejectModal').classList.add('hidden');
+            fetchEvents(currentStatus);
+        } catch (error) {
+            console.error('Error rejecting event:', error);
+            showToast(error.message, 'error');
+        }
+    });
+
+    // Status filter change
+    document.getElementById('statusFilter').addEventListener('change', (e) => {
+        currentStatus = e.target.value;
+        currentCursor = null;
+        fetchEvents(currentStatus);
+    });
+
+    // Refresh button
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+        currentCursor = null;
+        fetchEvents(currentStatus);
+    });
+
+    // Load more button
+    document.getElementById('loadMoreBtn').addEventListener('click', () => {
+        if (currentCursor) {
+            fetchEvents(currentStatus, currentCursor, true);
+        }
+    });
+
+    // Show toast notification
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Initial load
+    fetchEvents(currentStatus);
+</script>
+</body>
+</html>

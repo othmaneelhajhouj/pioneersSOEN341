@@ -1,0 +1,55 @@
+<% if (typeof injectStyles === 'undefined' || injectStyles) { %>
+  <%- include('./styles') %>
+<% } %>
+
+<nav class="navbar navbar-expand-lg mb-0" style="background:linear-gradient(90deg,var(--bg-dark,#111),var(--bg,#181818));border-bottom:1px solid var(--border,rgba(255,255,255,.1))">
+  <div class="container position-relative">
+    <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+      <span class="d-inline-block rounded" style="width:34px;height:34px;background:linear-gradient(135deg,var(--bs-primary,#d8c16a),var(--bs-secondary,#b5a8ff));box-shadow:0 0 24px -4px rgba(0,0,0,.6)"></span>
+      <span class="fw-bold"><%= typeof brand !== 'undefined' ? brand : 'Campus Events' %></span>
+    </a>
+  <% if (typeof crumbs !== 'undefined' && Array.isArray(crumbs) && crumbs.length) { %>
+      <nav aria-label="breadcrumb" class="ms-3 d-none d-md-block small">
+        <ol class="breadcrumb mb-0" style="--bs-breadcrumb-divider:'›';">
+          <% crumbs.forEach(function(c, i){ %>
+            <li class="breadcrumb-item <%= i === crumbs.length - 1 ? 'active' : '' %>">
+              <% if (c.href && i !== crumbs.length - 1) { %>
+                <a class="link-light text-decoration-none" href="<%= c.href %>"><%= c.label %></a>
+              <% } else { %>
+                <span class="text-secondary"><%= c.label %></span>
+              <% } %>
+            </li>
+          <% }) %>
+        </ol>
+      </nav>
+    <% } %>
+    <button class="navbar-toggler text-light border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="mainNav">
+      <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-1">
+        <li class="nav-item">
+          <a class="nav-link <%= active==='home' ? 'active fw-semibold' : '' %>" href="/">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link <%= active==='events' ? 'active fw-semibold' : '' %>" href="/events">Events</a>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle <%= active && active.startsWith('organizer') ? 'active fw-semibold' : '' %>" href="#" id="orgMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">Organizer</a>
+          <ul class="dropdown-menu dropdown-menu-dark border-secondary shadow" aria-labelledby="orgMenu">
+            <li><a class="dropdown-item" href="/organizers/1/events">Dashboard</a></li>
+            <li><a class="dropdown-item" href="/organizers/1/events#new">Quick Create</a></li>
+          </ul>
+        </li>
+      </ul>
+      <div class="d-flex ms-lg-3 mt-3 mt-lg-0 gap-2">
+        <% if (typeof navActions !== 'undefined' && navActions) { %>
+          <%- navActions %>
+        <% } else { %>
+          <a href="/login" class="btn btn-outline-primary btn-sm">Login</a>
+          <a href="/register" class="btn btn-primary btn-sm">Sign Up</a>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</nav>
