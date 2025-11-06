@@ -1,0 +1,14 @@
+<Events>
+    <Organization>
+        <EventType>
+            <EventTitle>
+                <Description></Description>
+                <location></location>
+                <TicketCapacity></TicketCapacity>
+                <TicketType></TicketType>
+                <Date></Date>
+                <Time></Time>
+            </EventTitle>
+        </EventType>
+    </Organization>
+</Events>
