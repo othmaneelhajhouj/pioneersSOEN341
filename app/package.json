@@ -1,6 +1,6 @@
 {
-  "name": "sprint-2",
-  "version": "0.0.2",
+  "name": "Campus Events",
+  "version": "0.0.3",
   "description": "Node server for SOEN341 project",
   "main": "app.js",
   "type": "commonjs",

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= (ticket && ticket.event) ? `${ticket.event.title} Ticket` : 'Ticket' %> | Campus Events</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <%- include('../partials/nav', { active: 'my-events', injectStyles: true }) %>
+</head>
+<body>
+<main class="container py-5" style="max-width:640px;">
+  <% if (typeof loadError !== 'undefined' && loadError) { %>
+    <div class="alert alert-warning">
+      We couldn't load that ticket. It may have been revoked or you might not have access.
+    </div>
+  <% } else if (!ticket) { %>
+    <div class="alert alert-warning">
+      Ticket not found.
+    </div>
+  <% } else { %>
+    <%
+      const event = ticket.event || {};
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    %>
+    <article class="card bg-dark border-secondary shadow-sm">
+      <div class="card-body">
+        <h1 class="h4 mb-3">Ticket for <%= event.title %></h1>
+        <dl class="row gy-2 mb-4">
+          <dt class="col-sm-4 text-secondary">Event time</dt>
+          <dd class="col-sm-8 mb-0">
+            <%= event.startsAt ? formatter.format(new Date(event.startsAt)) : '—' %>
+          </dd>
+          <dt class="col-sm-4 text-secondary">Location</dt>
+          <dd class="col-sm-8 mb-0"><%= event.location || '—' %></dd>
+          <dt class="col-sm-4 text-secondary">Status</dt>
+          <dd class="col-sm-8 mb-0 text-capitalize"><%= ticket.status %></dd>
+          <dt class="col-sm-4 text-secondary">Claimed</dt>
+          <dd class="col-sm-8 mb-0">
+            <%= ticket.claimedAt ? new Date(ticket.claimedAt).toLocaleString() : '—' %>
+          </dd>
+          <% if (ticket.usedAt) { %>
+            <dt class="col-sm-4 text-secondary">Checked in</dt>
+            <dd class="col-sm-8 mb-0">
+              <%= new Date(ticket.usedAt).toLocaleString() %>
+            </dd>
+          <% } %>
+        </dl>
+        <div class="text-center">
+          <img
+            src="/tickets/<%= ticket.id %>/qr?size=260"
+            alt="QR code for this ticket"
+            width="260"
+            height="260"
+            class="img-fluid rounded border border-secondary"
+          />
+          <p class="small text-secondary mt-2 mb-0">
+            Have this QR code ready when you check in.
+          </p>
+        </div>
+      </div>
+      <div class="card-footer bg-transparent border-top border-secondary d-flex flex-column flex-md-row gap-2 justify-content-between">
+        <a href="/events/<%= event.id %>" class="btn btn-outline-light btn-sm">Event details</a>
+        <a href="/my-events" class="btn btn-primary btn-sm">Back to My Events</a>
+      </div>
+    </article>
+  <% } %>
+</main>
+<%- include('../partials/footer') %>
+</body>
+</html>

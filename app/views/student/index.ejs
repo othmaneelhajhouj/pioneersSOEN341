@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<title>Events</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<!-- Include navigation bar -->
+	<%- include('../partials/nav', { active: 'events', injectStyles: true }) %>
+</head>
+<body>
+<!-- Hero section with page title -->
+<%- include('../partials/hero', { title: 'Upcoming Events', subtitle: 'Claim tickets & stay engaged.' }) %>
+
+<main class="container pb-5">
+  <%
+    // Get filter data from controller (if it exists)
+    const metaData = typeof meta !== 'undefined' ? meta : {filters: {}};
+    const filters = metaData.filters || {};
+    const hasError = typeof loadError !== 'undefined' ? loadError : false;
+    
+    // Helper function to convert date to YYYY-MM-DD format for input fields
+    const dateToInput = (d) => {
+      if (!d) return '';
+      try {
+        const iso = new Date(d).toISOString();
+        return iso.split('T')[0]; // Get just the date part
+      } catch (_e) {
+        return '';
+      }
+    };
+    
+    // Get current sort and order values (defaults)
+    const sortValue = metaData.sort || 'startsAt';
+    const orderValue = metaData.order || 'asc';
+  %>
+  
+  <!-- Filter and Sort Form -->
+  <section class="card bg-dark border-secondary shadow-sm mb-4">
+    <form class="card-body row gy-3 align-items-end" method="get" action="/events">
+      <!-- Search by title or description -->
+      <div class="col-12 col-md-4">
+        <label class="form-label small text-uppercase text-secondary" for="search">Search</label>
+        <input type="search" class="form-control form-control-sm" id="search" name="search" 
+               placeholder="Title or description" value="<%= filters.search || '' %>">
+      </div>
+      
+      <!-- Filter by date range -->
+      <div class="col-6 col-md-3">
+        <label class="form-label small text-uppercase text-secondary" for="from">From</label>
+        <input type="date" class="form-control form-control-sm" id="from" name="from" 
+               value="<%= dateToInput(filters.from) %>">
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label small text-uppercase text-secondary" for="to">To</label>
+        <input type="date" class="form-control form-control-sm" id="to" name="to" 
+               value="<%= dateToInput(filters.to) %>">
+      </div>
+      
+      <!-- Filter by category -->
+      <div class="col-6 col-md-2">
+        <label class="form-label small text-uppercase text-secondary" for="category">Category</label>
+        <input type="text" class="form-control form-control-sm" id="category" name="category" 
+               placeholder="e.g. Career" value="<%= filters.category || '' %>">
+      </div>
+      
+      <!-- Filter by organization ID -->
+      <div class="col-6 col-md-2">
+        <label class="form-label small text-uppercase text-secondary" for="org">Organization</label>
+        <input type="text" class="form-control form-control-sm" id="org" name="org" 
+               placeholder="Org ID" value="<%= filters.org || '' %>">
+      </div>
+      
+      <!-- Sort options -->
+      <div class="col-6 col-md-2">
+        <label class="form-label small text-uppercase text-secondary" for="sort">Sort by</label>
+        <select id="sort" name="sort" class="form-select form-select-sm">
+          <option value="startsAt" <%= sortValue === 'startsAt' ? 'selected' : '' %>>Start date</option>
+          <option value="createdAt" <%= sortValue === 'createdAt' ? 'selected' : '' %>>Created date</option>
+          <option value="title" <%= sortValue === 'title' ? 'selected' : '' %>>Title</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small text-uppercase text-secondary" for="order">Order</label>
+        <select id="order" name="order" class="form-select form-select-sm">
+          <option value="asc" <%= orderValue === 'asc' ? 'selected' : '' %>>Ascending</option>
+          <option value="desc" <%= orderValue === 'desc' ? 'selected' : '' %>>Descending</option>
+        </select>
+      </div>
+      
+      <!-- Apply and Reset buttons -->
+      <div class="col-12 col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm w-100">Apply</button>
+        <a href="/events" class="btn btn-outline-light btn-sm w-100">Reset</a>
+      </div>
+    </form>
+  </section>
+  
+  <!-- Error message if events failed to load -->
+  <% if (hasError) { %>
+    <div class="alert alert-danger">We had trouble loading events. Please try again in a moment.</div>
+  <% } %>
+  
+  <!-- Event Cards Grid -->
+	<div class="row g-4">
+    <% 
+    // Loop through each event and display it as a card
+    (events || []).forEach(ev => {
+      // Format the start date nicely
+      const startDate = ev.startsAt ? new Date(ev.startsAt) : null;
+      const displayDate = startDate 
+        ? startDate.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) 
+        : 'Date TBD';
+    %>
+			<div class="col-12 col-sm-6 col-lg-4">
+				<div class="card h-100">
+					<div class="card-body d-flex flex-column">
+            <!-- Event title -->
+						<h5 class="card-title mb-2"><%= ev.title %></h5>
+            
+            <!-- Event date with icon -->
+            <div class="small text-secondary mb-2">
+              <i class="fa fa-calendar me-1"></i><%= displayDate %>
+            </div>
+            
+            <!-- Event description (shortened) -->
+						<p class="card-text small flex-grow-1"><%= (ev.description || '').slice(0,140) %>...</p>
+            
+            <%
+              // Calculate remaining tickets
+              const claimedCount = ev._count ? ev._count.tickets : 0;
+              const capacity = Number.isFinite(ev.capacity) ? ev.capacity : 0;
+              const remaining = Math.max(capacity - claimedCount, 0);
+              const soldOut = capacity !== 0 && remaining <= 0;
+            %>
+            
+            <!-- Bottom buttons: Details link and Claim/Login button -->
+						<div class="d-flex justify-content-between align-items-center mt-2">
+							<a href="/events/<%= ev.id %>" class="btn btn-outline-light btn-sm">Details</a>
+              
+              <% if (soldOut) { %>
+                <!-- Event is sold out -->
+                <span class="badge bg-secondary text-uppercase">Sold out</span>
+              <% } else if (currentUser) { %>
+                <!-- User is logged in, show claim button -->
+                <form action="/events/<%= ev.id %>/tickets/claim" method="POST" class="m-0">
+								  <button class="btn btn-primary btn-sm" type="submit">Claim</button>
+							  </form>
+              <% } else { %>
+                <!-- User not logged in, show login link -->
+                <a href="/login?next=<%= encodeURIComponent('/events/' + ev.id) %>" 
+                   class="btn btn-primary btn-sm">Log in to claim</a>
+              <% } %>
+						</div>
+					</div>
+				</div>
+			</div>
+		<% }) %>
+    
+    <!-- Show message if no events found -->
+		<% if(!events || !events.length){ %>
+			<div class="col-12">
+				<div class="alert alert-secondary">No events yet.</div>
+			</div>
+		<% } %>
+	</div>
+</main>
+
+<!-- Footer -->
+<%- include('../partials/footer') %>
+</body>
+</html>

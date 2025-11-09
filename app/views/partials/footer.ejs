@@ -1,0 +1,28 @@
+<footer class="footer mt-auto py-4" style="background:var(--bg-dark,#101010);border-top:1px solid var(--border,rgba(255,255,255,.1))">
+  <div class="container text-center text-md-start">
+    <div class="row gy-3 align-items-center">
+      <div class="col-12 col-md">
+        <h2 class="h5 fw-bold mb-2" style="background:linear-gradient(135deg,var(--bs-primary,#d8c16a),var(--bs-secondary,#b5a8ff));-webkit-background-clip:text;background-clip:text;color:transparent">
+          Campus Events
+        </h2>
+        <p class="text-secondary small mb-0">Plan, discover, and attend student life in a few clicks.</p>
+      </div>
+      <div class="col-12 col-md-auto">
+        <ul class="list-inline mb-0 small">
+          <li class="list-inline-item me-3"><a class="link-light link-underline-opacity-0 link-underline-opacity-50-hover" href="/">Home</a></li>
+          <li class="list-inline-item me-3"><a class="link-light link-underline-opacity-0 link-underline-opacity-50-hover" href="/events">Events</a></li>
+          <li class="list-inline-item">
+            <a class="link-light link-underline-opacity-0 link-underline-opacity-50-hover" href="<%= currentUser ? '/profile' : '/register' %>">
+              <%= currentUser ? 'My Profile' : 'Get Started' %>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="border-top pt-3 mt-3 d-flex flex-column flex-md-row justify-content-between gap-2 text-secondary small">
+      <span>&copy; <%= new Date().getFullYear() %> Campus Events · SOEN 341</span>
+      <span>Built by the Pioneers team</span>
+    </div>
+  </div>
+  <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+</footer>
