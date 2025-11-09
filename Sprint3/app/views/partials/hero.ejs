@@ -1,0 +1,20 @@
+<section class="hero mb-3 position-relative overflow-hidden" style="
+  position:relative;z-index:1;overflow:hidden;text-align:center;
+  padding:44px 18px 30px; border:1px solid color-mix(in oklch,var(--line) 45%, transparent);
+  background:
+    radial-gradient(900px 300px at 20% -20%, color-mix(in oklch, var(--gold) 18%, transparent), transparent),
+    radial-gradient(900px 300px at 80% -30%, color-mix(in oklch, var(--vio) 16%, transparent), transparent),
+    color-mix(in oklch, var(--bg-1, var(--bg)) 85%, black);
+  border-radius:14px;">
+  <div class="position-relative mx-auto" style="max-width:1200px">
+    <h1 style="margin:0;font-size:clamp(22px,3.4vw,34px);font-weight:800;letter-spacing:.2px;" class="mb-2"><%= typeof title !== 'undefined' ? title : '' %></h1>
+    <% if (typeof subtitle !== 'undefined') { %>
+      <p style="margin:8px 0 0;color:var(--muted);font-size:14.5px" class="mb-3"><%= subtitle %></p>
+    <% } %>
+    <% if (typeof heroTools !== 'undefined' && heroTools) { %>
+      <div class="hero-tools" style="margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <%- heroTools %>
+      </div>
+    <% } %>
+  </div>
+</section>

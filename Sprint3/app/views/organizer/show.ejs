@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= event ? event.title : 'Event Details' %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <%- include('../partials/styles') %>
+  <% const crumbs = [{label:'Organizer', href:`/organizers/${organizerId}/events`},{ label: event ? event.title : 'Event'}]; %>
+</head>
+<body data-organizer-id="<%= organizerId %>" data-flash="<%= (flash ? String(flash).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '') %>">
+<%- include('../partials/nav', { active: 'organizer:show', brand: 'Organizer', crumbs }) %>
+<%- include('../partials/hero', { title: event ? event.title : 'Event Details', subtitle: event ? 'Overview, performance and attendees' : 'This event could not be found' }) %>
+<main class="container pb-5">
+  <% if (flash) { %>
+    <div class="alert alert-success"><i class="fa-solid fa-circle-check me-1"></i> <%= flash %></div>
+  <% } %>
+  <% if (errors && errors.length) { %>
+    <div class="alert alert-danger">
+      <strong><i class="fa-solid fa-triangle-exclamation me-1"></i>Issues:</strong>
+      <ul class="mb-0 mt-2">
+        <% errors.forEach(e=>{ %><li><%= e %></li><% }) %>
+      </ul>
+    </div>
+  <% } %>
+
+  <% if (!event) { %>
+    <div class="row-card" style="display:grid;gap:14px;max-width:560px;margin:0 auto 40px auto;text-align:center;">
+      <div class="o-title" style="font-size:20px;">Event unavailable</div>
+      <div class="o-sub" style="font-size:13.5px;">The event may have been deleted or you may not have access to it.</div>
+      <div><a class="btn secondary" href="/organizers/<%= organizerId %>/events"><i class="fa-solid fa-arrow-left"></i> Back to events</a></div>
+    </div>
+  <% } else { %>
+    <% const ticketsSold = event._count && typeof event._count.tickets==='number'? event._count.tickets:0;
+       const capacity = typeof event.capacity==='number'? event.capacity:0;
+       const remaining = capacity - ticketsSold;
+       const utilization = capacity ? Math.min(100, Math.round((ticketsSold/capacity)*100)) : 0;
+       const revenue = event.type==='paid' && typeof event.price==='number' ? (event.price/100) * ticketsSold : null;
+       const formatDateTime = v=>{ if(!v) return '—'; const d=new Date(v); if(isNaN(d)) return '—'; return d.toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); };
+       const formatDate = v=>{ if(!v) return '—'; const d=new Date(v); if(isNaN(d)) return '—'; return d.toLocaleDateString([], {month:'short',day:'numeric',year:'numeric'}); };
+       const formatCurrency = val => (val===null||isNaN(val)) ? '—' : new Intl.NumberFormat(undefined,{style:'currency',currency:'CAD'}).format(val);
+    %>
+    <section class="row-grid" style="display:grid;gap:18px;margin-bottom:34px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));">
+      <div class="row-card" style="display:grid;gap:10px;">
+        <div class="o-sub" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Status</div>
+        <div>
+          <span class="status-chip <%= event.published ? 'live':'' %>">
+            <i class="fa-solid <%= event.published ? 'fa-signal':'fa-pen-to-square' %>"></i>
+            <span class="status-label"><%= event.published ? 'Published':'Draft' %></span>
+          </span>
+        </div>
+        <div class="helper">Created <%= formatDate(event.createdAt) %></div>
+        <div class="event-controls" style="margin-top:4px;">
+          <div class="toggle <%= event.published ? 'on' : '' %>" id="togglePublish" data-event-id="<%= event.id %>" data-published="<%= event.published %>" role="switch" aria-checked="<%= event.published %>">
+            <div class="knob"></div><span>Draft</span><span>Live</span>
+          </div>
+          <div class="helper">Tap to <%= event.published ? 'unpublish':'publish' %></div>
+        </div>
+      </div>
+      <div class="row-card" style="display:grid;gap:10px;">
+        <div class="o-sub" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Ticket Sales</div>
+        <div class="o-title" style="font-size:24px;letter-spacing:.5px;"><%= ticketsSold %>/<%= capacity %></div>
+        <div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= utilization %>"><div class="meter__fill" style="--fill:<%= utilization %>%"></div></div>
+        <div class="helper" style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <span>Remaining <b><%= remaining >=0 ? remaining:0 %></b></span>
+          <span>Utilization <b><%= utilization %>%</b></span>
+        </div>
+      </div>
+      <div class="row-card" style="display:grid;gap:10px;">
+        <div class="o-sub" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Revenue</div>
+        <div class="o-title" style="font-size:24px;letter-spacing:.5px;">
+          <%= event.type==='paid'? formatCurrency(revenue||0):'Free' %>
+        </div>
+        <div class="helper"><%= event.type==='paid'? 'Ticket price ' + formatCurrency(event.price/100): 'No ticket price' %></div>
+      </div>
+      <div class="row-card" style="display:grid;gap:10px;">
+        <div class="o-sub" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Meta</div>
+        <div class="helper">Event ID <code><%= event.id %></code></div>
+        <div class="helper">Type <b><%= event.type==='paid' ? 'Paid':'Free' %></b></div>
+        <div class="helper">Start <b><%= formatDateTime(event.startsAt) %></b></div>
+        <div class="helper">End <b><%= formatDateTime(event.endsAt) %></b></div>
+      </div>
+      <div class="row-card" style="display:grid;gap:10px;">
+        <div class="o-sub" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Actions</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <a href="/organizers/<%= organizerId %>/events" class="btn ghost"><i class="fa-solid fa-arrow-left"></i> Back</a>
+          <button class="btn danger" id="deleteEvent" data-event-id="<%= event.id %>" type="button"><i class="fa-solid fa-trash"></i> Delete</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="row-card" style="display:grid;gap:22px;margin-bottom:34px;">
+      <div class="o-title" style="font-size:20px;">Overview</div>
+      <p class="o-sub" style="font-size:14px;line-height:1.55;color:var(--ink);"><%= event.description %></p>
+      <div class="event-meta" style="margin-top:4px;">
+        <span><i class="fa-regular fa-clock"></i> <%= formatDateTime(event.startsAt) %></span>
+        <span><i class="fa-solid fa-hourglass-half"></i> Ends <%= formatDateTime(event.endsAt) %></span>
+        <span><i class="fa-solid fa-location-dot"></i> <%= event.location %></span>
+        <span><i class="fa-solid fa-people-group"></i> Capacity <%= capacity %></span>
+      </div>
+    </section>
+
+    <section class="row-card" style="display:grid;gap:18px;">
+      <div class="o-title" style="font-size:20px;display:flex;align-items:center;gap:8px;">
+        <i class="fa-solid fa-users"></i> Attendees <span class="helper" style="font-weight:600;">(<%= ticketsSold %>)</span>
+      </div>
+      <% if (!event.tickets || !event.tickets.length) { %>
+        <div class="helper">No tickets sold yet.</div>
+      <% } else { %>
+        <div style="overflow:auto;border:1px solid color-mix(in oklch,var(--line) 60%,transparent);border-radius:14px;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead style="background:var(--bg-dark);text-align:left;">
+              <tr>
+                <th style="padding:10px 12px;font-weight:600;">Name</th>
+                <th style="padding:10px 12px;font-weight:600;">Email</th>
+                <th style="padding:10px 12px;font-weight:600;">Ticket ID</th>
+                <th style="padding:10px 12px;font-weight:600;">Purchased</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% event.tickets.forEach(ticket=>{ %>
+              <tr style="border-top:1px solid color-mix(in oklch,var(--line) 55%,transparent);">
+                <td style="padding:9px 12px;white-space:nowrap;"> <%= ticket.user ? ticket.user.firstName + ' ' + ticket.user.lastName : 'N/A' %></td>
+                <td style="padding:9px 12px;"> <%= ticket.user ? ticket.user.email : '—' %></td>
+                <td style="padding:9px 12px;"> <code><%= ticket.id %></code></td>
+                <td style="padding:9px 12px;"> <%= ticket.createdAt ? formatDateTime(ticket.createdAt) : '—' %></td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+  <% } %>
+</main>
+<div class="toast" id="toast"></div>
+<%- include('../partials/footer') %>
+<script type="module" src="/js/event-details.js"></script>
+</body>
+</html>
