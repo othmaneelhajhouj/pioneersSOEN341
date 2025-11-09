@@ -20,17 +20,18 @@ function makeScanApp(user) {
 describe('Organizer QR scan API', () => {
 
   let organizer, admin, student, event, ticket;
+  const uniq = `${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
 
-  beforeAll(async () => {
-    organizer = await prisma.user.create({
-      data: {email: 'org@example.com', passwordHash: 'x', firstName: 'Org', role: 'organizer', organizerStatus: 'approved'},
-    });
-    admin = await prisma.user.create({
-      data: {email: 'admin@example.com', passwordHash: 'x', firstName: 'Admin', role: 'admin'},
-    });
-    student = await prisma.user.create({
-      data: {email: 'stu@example.com', passwordHash: 'x', firstName: 'Stu', role: 'student'},
-    });
+beforeAll(async () => {
+  organizer = await prisma.user.create({
+    data: { email: `org+${uniq}@example.com`, passwordHash: 'x', firstName: 'Org', role: 'organizer', organizerStatus: 'approved' },
+  });
+  admin = await prisma.user.create({
+    data: { email: `admin+${uniq}@example.com`, passwordHash: 'x', firstName: 'Admin', role: 'admin' },
+  });
+  student = await prisma.user.create({
+    data: { email: `stu+${uniq}@example.com`, passwordHash: 'x', firstName: 'Stu', role: 'student' },
+  });
 
     event = await prisma.event.create({
       data: {
