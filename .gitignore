@@ -3,4 +3,4 @@ node_modules/
 app/.env
 app/prisma/**/*.db
 app/.tmp/
-
+.idea/
