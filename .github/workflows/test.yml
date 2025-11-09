@@ -1,7 +1,9 @@
 name: tests
+
 on:
   push:
   pull_request:
+
 jobs:
   node:
     runs-on: ubuntu-latest
@@ -9,13 +11,27 @@ jobs:
       run:
         working-directory: app
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: app/package-lock.json
-      - run: npm ci
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client (WASM) into app/generated/prisma
+        run: npx prisma generate --schema=generated/prisma/schema.prisma
+        env:
+          PRISMA_CLIENT_ENGINE_TYPE: wasm
+
+      - name: Build TypeScript to dist
+        run: npm run build
+
       - name: Run tests with coverage
         run: npm test -- --coverage
         env:
