@@ -346,6 +346,7 @@ table td, table th {
   text-align: center;
   font-size: 12px;
   font-weight: 800;
+  -webkit-user-select: none;
   user-select: none;
   z-index: 1;
 }
