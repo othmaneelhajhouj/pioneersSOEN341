@@ -54,7 +54,7 @@ describe('ticketService.claimTicket', () => {
 
   test('capacity full, throws FULL', async () => {
     const other = await prisma.user.create({
-        data: {email: 's2@example.com', passwordHash: 'x', firstName: 'Else', role: 'student'},
+      data: { email: `s2+${uniq}@example.com`, passwordHash: 'x', firstName: 'Else', role: 'student' },
     });
     await expect(claimTicket({eventId: event.id, userId: other.id})).rejects.toThrow('FULL');
   });
