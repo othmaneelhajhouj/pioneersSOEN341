@@ -3,13 +3,15 @@ const request = require('supertest');
 const {prisma} = require('../../dist/db');
 const {makeTestApp} = require('./testApp');
 
+const uniq = `${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
+
 describe('Student tickets API', () => {
   let app, student, event;
 
   beforeAll(async () => {
     // Create a student user and a published event
     student = await prisma.user.create({
-      data: {email: 's1@example.com', passwordHash: 'x', firstName: 'Stu', role: 'student'},
+      data: { email: `s1+${uniq}@example.com`, passwordHash: 'x', firstName: 'Stu', role: 'student' },
     });
     event = await prisma.event.create({
       data: {
@@ -67,7 +69,7 @@ describe('Student tickets API', () => {
 
   test('409 when capacity full', async () => {
     const other = await prisma.user.create({
-      data: {email: 's2@example.com', passwordHash: 'x', firstName: 'Other', role: 'student'},
+      data: { email: `s2+${uniq}@example.com`, passwordHash: 'x', firstName: 'Other', role: 'student' },
     });
     const appOther = makeTestApp({user: {id: other.id, role: 'student'}});
     const res = await request(appOther).post(`/events/${event.id}/tickets/claim`).send({});
