@@ -1,6 +1,8 @@
 // tests discovery filters by checking them agains prisma
 const {prisma} = require('../../dist/db');
 
+const uniq = `${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
+
 // discovery function the app uses to filter events
 async function  listPublished({dateFrom, dateTo, category, location}) {
   return prisma.event.findMany({
@@ -19,7 +21,7 @@ describe('event discovery', () => {
 
   beforeAll(async () => {
     const u = await prisma.user.create({
-      data: {email: 'org@example.com', passwordHash: 'x', firstName: 'Org', role: 'organizer', organizerStatus: 'approved'},
+      data: { email: `org+${uniq}@example.com`, passwordHash: 'x', firstName: 'Org', role: 'organizer', organizerStatus: 'approved' },
     });
 
     // base fields for all test events (i.e. all events published)
