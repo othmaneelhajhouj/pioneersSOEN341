@@ -25,15 +25,24 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma client (WASM) into app/generated/prisma
-        run: npx prisma generate --schema=generated/prisma/schema.prisma
+        run: npx prisma generate --schema=prisma/schema.prisma
         env:
           PRISMA_CLIENT_ENGINE_TYPE: wasm
+
+      - name: Setup test database
+        run: |
+          mkdir -p .tmp
+          export DATABASE_URL="file:.tmp/test-ci.db"
+          npx prisma migrate deploy --schema=prisma/schema.prisma
+        env:
+          DATABASE_URL: file:.tmp/test-ci.db
 
       - name: Build TypeScript to dist
         run: npm run build
 
       - name: Run tests with coverage
-        run: npm test -- --coverage
+        run: npm test -- --coverage --config jest.config.cjs
         env:
           NODE_ENV: test
+          DATABASE_URL: file:.tmp/test-ci.db
           PRISMA_CLIENT_ENGINE_TYPE: wasm
