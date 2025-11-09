@@ -124,13 +124,16 @@ describe('Organizer QR scan API', () => {
     jest.doMock('jsqr', () => () => ({data: 'IMGQR'}), { virtual: true });
     jest.doMock('jimp', () => ({
       read: async () => ({
-        bitmap: {data: Buffer.from([0,0,0,0]),
-        width: 1, height: 1}}),
+        bitmap: { data: Buffer.alloc(2 * 2 * 4), width: 2, height: 2 },
+      }),
     }));
     
-    const mockedRouter = require('../../dist/routes/organizerScan').organizerScan;
+  let mockedRouter;
+  jest.isolateModules(() => {
+    mockedRouter = require('../../dist/routes/organizerScan').organizerScan;
+  });
 
-    const app = express();
+    const app = require('express')();
     app.use((req, _res, next) => {req.user = {id: organizer.id, role: 'organizer'}; next();});
     app.use(mockedRouter);
 
