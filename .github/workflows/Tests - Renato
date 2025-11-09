@@ -1,0 +1,150 @@
+# Organizer Testing Pipeline - GitHub Actions Workflow
+# Runs automated tests for organizer functionality on push and pull requests
+
+name: Organizer Tests
+
+on:
+  push:
+    branches: [ main, Renato ]
+    paths:
+      - 'app/**'
+      - '.github/workflows/test-organizer.yml'
+  pull_request:
+    branches: [ main, Renato ]
+    paths:
+      - 'app/**'
+
+jobs:
+  test:
+    name: Run Organizer Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./app
+        run: npm ci
+      
+      - name: Create .env file
+        working-directory: ./app
+        run: |
+          echo "DATABASE_URL=file:./prisma/dev.db" >> .env
+          echo "TEST_DATABASE_URL=file:./prisma/test.db" >> .env
+          echo "NODE_ENV=test" >> .env
+      
+      - name: Generate Prisma Client
+        working-directory: ./app
+        run: npm run prisma:generate
+      
+      - name: Run database migrations
+        working-directory: ./app
+        run: npm run prisma:migrate
+        env:
+          DATABASE_URL: file:./prisma/test.db
+      
+      - name: Build TypeScript
+        working-directory: ./app
+        run: npm run build
+      
+      - name: Run all tests
+        working-directory: ./app
+        run: npm test
+      
+      - name: Run organizer-specific tests
+        working-directory: ./app
+        run: npm run test:organizer
+      
+      - name: Generate coverage report
+        working-directory: ./app
+        run: npm run test:coverage
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./app/coverage/lcov.info
+          flags: organizer-tests
+          name: organizer-coverage
+          fail_ci_if_error: false
+      
+      - name: Archive test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.node-version }}
+          path: |
+            app/coverage/
+            app/__tests__/
+          retention-days: 30
+      
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const coverage = fs.readFileSync('./app/coverage/coverage-summary.json', 'utf8');
+            const summary = JSON.parse(coverage);
+            
+            const comment = `## Organizer Test Results
+            
+            **Coverage Summary:**
+            - **Lines:** ${summary.total.lines.pct}%
+            - **Statements:** ${summary.total.statements.pct}%
+            - **Functions:** ${summary.total.functions.pct}%
+            - **Branches:** ${summary.total.branches.pct}%
+            
+            All organizer tests passed!
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  lint:
+    name: Lint and Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./app
+        run: npm ci
+      
+      - name: Generate Prisma Client
+        working-directory: ./app
+        run: npm run prisma:generate
+      
+      - name: TypeScript type check
+        working-directory: ./app
+        run: npx tsc --noEmit
+      
+      - name: Check for TypeScript errors
+        working-directory: ./app
+        run: |
+          echo "Checking TypeScript compilation..."
+          npm run build
