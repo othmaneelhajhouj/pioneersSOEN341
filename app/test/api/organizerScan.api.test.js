@@ -6,6 +6,8 @@ const multer = require('multer');
 const {prisma} = require('../../dist/db');
 const {organizerScan} = require('../../dist/routes/organizerScan');
 
+const uniq = `${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
+
 function makeScanApp(user) {
   const app = express();
   app.use(bodyParser.json());
@@ -20,7 +22,6 @@ function makeScanApp(user) {
 describe('Organizer QR scan API', () => {
 
   let organizer, admin, student, event, ticket;
-  const uniq = `${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
 
 beforeAll(async () => {
   organizer = await prisma.user.create({
@@ -72,7 +73,7 @@ beforeAll(async () => {
 
   test('403 when non-owner organizer scans another organizer’s event', async () => {
     const other = await prisma.user.create({
-      data: {email:'org2@example.com', passwordHash:'x', firstName:'Other', role: 'organizer', organizerStatus: 'approved'},
+      data: { email: `org2+${uniq}@example.com`, passwordHash: 'x', firstName: 'Other', role: 'organizer', organizerStatus: 'approved' },
     });
     const app = makeScanApp({id: other.id, role: 'organizer'});
     const res = await request(app)
