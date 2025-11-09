@@ -6,11 +6,13 @@ describe('ticketService.claimTicket', () => {
 
   let student, event;
 
+  const uniq = `${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
+  
   //Create student and event for tests
   beforeAll(async () => {
     student = await prisma.user.create({
       data: {
-        email: 's1@example.com',
+        email: `s1+${uniq}@example.com`,
         passwordHash: 'x',
         firstName: 'Stu',
         role: 'student',
