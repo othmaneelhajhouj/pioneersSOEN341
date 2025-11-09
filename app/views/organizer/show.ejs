@@ -80,10 +80,10 @@
         <div class="o-sub" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Ticket Sales</div>
         <div class="o-title" style="font-size:24px;letter-spacing:.5px;"><%= ticketsSold %>/<%= capacity %></div>
         <div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= utilization %>"><div class="meter__fill" style="--fill:<%= utilization %>%"></div></div>
-        <div class="helper" style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-          <span>Remaining <b><%= remaining >=0 ? remaining:0 %></b></span>
-          <span>Utilization <b><%= utilization %>%</b></span>
-          <span>Attendance <b><%= attendanceRate %>%</b> (<%= checkedIn %>/<%= ticketsSold %>)</span>
+        <div class="helper" style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--muted);">
+          <span>Remaining <b style="color:var(--ink);"><%= remaining >=0 ? remaining:0 %></b></span>
+          <span>Utilization <b style="color:var(--ink);"><%= utilization %>%</b></span>
+          <span>Attendance <b style="color:var(--ink);"><%= attendanceRate %>%</b> (<%= checkedIn %>/<%= ticketsSold %>)</span>
         </div>
       </div>
       
@@ -98,11 +98,11 @@
       
       <!-- Timeline Card -->
       <div class="row-card" style="display:grid;gap:10px;">
-        <div class="o-sub" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Meta</div>
-        <div class="helper">Event ID <code><%= event.id %></code></div>
-        <div class="helper">Type <b><%= event.type==='paid' ? 'Paid':'Free' %></b></div>
-        <div class="helper">Start <b><%= formatDateTime(event.startsAt) %></b></div>
-        <div class="helper">End <b><%= formatDateTime(event.endsAt) %></b></div>
+        <div class="o-sub" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;color:var(--muted);">Meta</div>
+        <div class="helper" style="color:var(--muted);">Event ID <code style="color:var(--gold);"><%= event.id %></code></div>
+        <div class="helper" style="color:var(--muted);">Type <b style="color:var(--ink);"><%= event.type==='paid' ? 'Paid':'Free' %></b></div>
+        <div class="helper" style="color:var(--muted);">Start <b style="color:var(--ink);"><%= formatDateTime(event.startsAt) %></b></div>
+        <div class="helper" style="color:var(--muted);">End <b style="color:var(--ink);"><%= formatDateTime(event.endsAt) %></b></div>
       </div>
       <div class="row-card" style="display:grid;gap:10px;">
         <div class="o-sub" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Actions</div>
@@ -138,22 +138,22 @@
         <div class="helper">No tickets sold yet.</div>
       <% } else { %>
         <div style="overflow:auto;border:1px solid color-mix(in oklch,var(--line) 60%,transparent);border-radius:14px;">
-          <table style="width:100%;border-collapse:collapse;font-size:13px;">
-            <thead style="background:var(--bg-dark);text-align:left;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;color:var(--ink);">
+            <thead style="background:var(--bg-dark);text-align:left;color:var(--ink);">
               <tr>
-                <th style="padding:10px 12px;font-weight:600;">Name</th>
-                <th style="padding:10px 12px;font-weight:600;">Email</th>
-                <th style="padding:10px 12px;font-weight:600;">Ticket ID</th>
-                <th style="padding:10px 12px;font-weight:600;">Purchased</th>
+                <th style="padding:10px 12px;font-weight:600;color:var(--ink);">Name</th>
+                <th style="padding:10px 12px;font-weight:600;color:var(--ink);">Email</th>
+                <th style="padding:10px 12px;font-weight:600;color:var(--ink);">Ticket ID</th>
+                <th style="padding:10px 12px;font-weight:600;color:var(--ink);">Purchased</th>
               </tr>
             </thead>
             <tbody>
               <% event.tickets.forEach(ticket=>{ %>
               <tr style="border-top:1px solid color-mix(in oklch,var(--line) 55%,transparent);">
-                <td style="padding:9px 12px;white-space:nowrap;"> <%= ticket.user ? ticket.user.firstName + ' ' + ticket.user.lastName : 'N/A' %></td>
-                <td style="padding:9px 12px;"> <%= ticket.user ? ticket.user.email : '—' %></td>
-                <td style="padding:9px 12px;"> <code><%= ticket.id %></code></td>
-                <td style="padding:9px 12px;"> <%= ticket.createdAt ? formatDateTime(ticket.createdAt) : '—' %></td>
+                <td style="padding:9px 12px;white-space:nowrap;color:var(--ink);"> <%= ticket.user ? ticket.user.firstName + ' ' + ticket.user.lastName : 'N/A' %></td>
+                <td style="padding:9px 12px;color:var(--ink);"> <%= ticket.user ? ticket.user.email : '—' %></td>
+                <td style="padding:9px 12px;"> <code style="color:var(--gold);"><%= ticket.id %></code></td>
+                <td style="padding:9px 12px;color:var(--ink);"> <%= ticket.createdAt ? formatDateTime(ticket.createdAt) : '—' %></td>
               </tr>
               <% }) %>
             </tbody>
@@ -173,13 +173,13 @@
           <form id="qrTokenForm" style="display:grid;gap:10px;" autocomplete="off">
             <label class="form-label small text-uppercase text-secondary" for="qrTokenInput">Enter QR token</label>
             <input type="text" class="form-control" id="qrTokenInput" name="qrToken" placeholder="Paste or scan QR token value" required />
-            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-check me-1"></i>Validate ticket</button>
+            <button class="btn btn-primary" type="submit" title="Validate this QR token"><i class="fa-solid fa-check me-1"></i>Validate ticket</button>
           </form>
           <form id="qrImageForm" style="display:grid;gap:10px;" enctype="multipart/form-data">
             <label class="form-label small text-uppercase text-secondary" for="qrImageInput">Upload QR image</label>
             <input type="file" class="form-control" id="qrImageInput" name="image" accept="image/*" required />
             <div class="form-text">PNG or JPG · Max 5 MB</div>
-            <button class="btn btn-outline-light" type="submit"><i class="fa-solid fa-camera me-1"></i>Scan image</button>
+            <button class="btn btn-outline-light" type="submit" title="Scan QR code from image"><i class="fa-solid fa-camera me-1"></i>Scan image</button>
           </form>
         </div>
         <div id="scanResult" class="alert alert-secondary d-none" role="status"></div>

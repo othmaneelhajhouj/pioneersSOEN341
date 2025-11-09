@@ -1,9 +1,8 @@
 import {Router, Request, Response} from "express";
 import {prisma} from "../db";
 import multer from "multer";
-
-const Jimp = require("jimp");
-const jsQR = require("jsqr");
+import {Jimp} from "jimp";
+import jsQR from "jsqr";
 
 export const organizerScan = Router();
 
@@ -112,9 +111,9 @@ organizerScan.post("/organizers/:organizerId/events/:eventId/scan-image", upload
 
         //decode qr
         const img = await Jimp.read(req.file.buffer);
-        const {data, width, height} = img.bitmap;
-        const pixels = new Uint8ClampedArray(data.buffer, data.byteOffset, data.byteLength);
-        const result = jsQR(pixels, width, height);
+        const {bitmap} = img;
+        const pixels = new Uint8ClampedArray(bitmap.data.buffer, bitmap.data.byteOffset, bitmap.data.byteLength);
+        const result = jsQR(pixels, bitmap.width, bitmap.height);
 
         if(!result || !result.data){
             return res.status(400).json({ok: false, state: "invalid_qr"});

@@ -22,7 +22,7 @@ async function main() {
   const [organizer1, organizer2, organizer3] = await Promise.all([
     prisma.user.create({ data: { email: "org1@example.com", firstName: "Alex",   lastName: "Smith",  role: "organizer", organizerStatus: "pending", passwordHash: hashPassword("Organizer123!") } }),
     prisma.user.create({ data: { email: "org2@example.com", firstName: "Morgan", lastName: "Chen",   role: "organizer", organizerStatus: "pending", passwordHash: hashPassword("Organizer123!") } }),
-    prisma.user.create({ data: { email: "org3@example.com", firstName: "Jamie",  lastName: "Lopez",  role: "organizer", organizerStatus: "pending", passwordHash: hashPassword("Organizer123!") } }),
+    prisma.user.create({ data: { email: "org3@example.com", firstName: "Jamie",  lastName: "Lopez",  role: "organizer", organizerStatus: "approved", passwordHash: hashPassword("Organizer123!") } }),
   ]);
 
   const [student1, student2, student3, student4, admin1] = await Promise.all([
