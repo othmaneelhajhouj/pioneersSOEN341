@@ -30,7 +30,6 @@ This is a university campus events & ticketing web application designed to enabl
    - Administrators are able to manage organizations and assign roles
 
 ## Team Members
-- [Alek Zmarzlak (@a-zmarz) — (40227624)](https://github.com/a-zmarz)
 - [Klisea Plaku (@Klisea-P) — Frontend (40313343)](https://github.com/Klisea-P)
 - [Othmane El Hajhouj (@othmaneelhajhouj & @motorolahh) — (40260055)](https://github.com/othmaneelhajhouj)
 - [Renato Miguel Cruz Faria (@WTV26) — Backend/Databases/Frontend (40211900)](https://github.com/WTV26)
