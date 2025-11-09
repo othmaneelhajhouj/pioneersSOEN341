@@ -24,6 +24,11 @@ async function ensureOrganizerAccess(req: Request, eventId: string, organizerIdP
         return {ok: false as const, code: 403, msg: "Organizer access denied."};
     }
 
+    // Check if organizer is approved
+    if(req.user.organizerStatus !== "approved") {
+        return {ok: false as const, code: 403, msg: "Organizer approval required."};
+    }
+
     const ev = await prisma.event.findUnique({
         where: {id: eventId},
         select: {organizerId: true},
