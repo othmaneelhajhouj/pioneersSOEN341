@@ -23,17 +23,35 @@ async function cleanDatabase() {
  * Create a test organization
  */
 async function createTestOrganization(data = {}) {
-  return await prisma.organization.create({
+  const org = await prisma.organization.create({
     data: {
       name: data.name || 'Test Organization',
+      description: data.description || null,
     },
   });
+  
+  // Ensure the turn the full organization object with id
+  if (!org || !org.id) {
+    throw new Error('Failed to create organization - missing id');
+  }
+  
+  return org;
 }
 
 /**
  * Create a test user with password hash
  */
 async function createTestUser(data = {}) {
+  // Validate organizationId if provided
+  if (data.organizationId) {
+    const orgExists = await prisma.organization.findUnique({
+      where: { id: data.organizationId },
+    });
+    if (!orgExists) {
+      throw new Error(`Cannot create user: Organization with id ${data.organizationId} does not exist`);
+    }
+  }
+  
   const salt = crypto.randomBytes(16);
   const passwordHash = crypto.scryptSync('password123', salt, 64);
   const combinedHash = Buffer.concat([salt, passwordHash]);
@@ -159,7 +177,7 @@ async function createTestTicket(eventIdOrData, userId, status = 'claimed') {
  * Mock Express request object
  */
 function mockRequest(overrides = {}) {
-  return {
+  const req = {
     params: {},
     query: {},
     body: {},
@@ -167,6 +185,14 @@ function mockRequest(overrides = {}) {
     user: null,
     ...overrides,
   };
+  
+  // Automatically set req.organizerId if params.organizerId is provided
+  // This mimics what the checkOrganizerPermissions middleware does
+  if (req.params?.organizerId && !req.organizerId) {
+    req.organizerId = req.params.organizerId;
+  }
+  
+  return req;
 }
 
 /**
@@ -176,6 +202,7 @@ function mockResponse() {
   const res = {
     statusCode: 200,
     data: null,
+    headers: {}, // Store headers set via setHeader
   };
   
   res.status = jest.fn((code) => {
@@ -201,6 +228,11 @@ function mockResponse() {
   res.render = jest.fn((view, data) => {
     res.view = view;
     res.renderData = data;
+    return res;
+  });
+  
+  res.setHeader = jest.fn((name, value) => {
+    res.headers[name] = value;
     return res;
   });
   

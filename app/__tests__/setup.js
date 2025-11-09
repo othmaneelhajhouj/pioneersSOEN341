@@ -14,10 +14,10 @@ jest.setTimeout(30000);
 
 // Global test setup
 beforeAll(async () => {
-  console.log('🧪 Test suite starting...');
+  console.log('Test suite starting...');
 });
 
 // Global test teardown
 afterAll(async () => {
-  console.log('✅ Test suite completed');
+  console.log('Test suite completed');
 });
