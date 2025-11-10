@@ -41,7 +41,7 @@ jobs:
         run: npm run build
 
       - name: Run tests with coverage
-        run: npm test -- --coverage --config jest.config.cjs
+        run: npm test -- --coverage --config jest.config.js
         env:
           NODE_ENV: test
           DATABASE_URL: file:.tmp/test-ci.db
