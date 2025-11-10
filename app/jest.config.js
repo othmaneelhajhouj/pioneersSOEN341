@@ -30,7 +30,7 @@ module.exports = {
         '!**/dist/**',
         '!**/generated/**',
       ],
-      coverageDirectory: 'coverage',
+      coverageDirectory: '<rootDir>/coverage',
       coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
       moduleNameMapper: {
         '^generated-prisma/client$': '<rootDir>/generated/prisma',
