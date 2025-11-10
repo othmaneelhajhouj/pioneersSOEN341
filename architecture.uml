@@ -1,0 +1,120 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam packageBorderColor #333333
+skinparam packageBackgroundColor #F8F9FA
+skinparam shadowing false
+
+title Campus Events & Ticketing System\nLayered Architecture (Logical View)
+
+' ===== LAYER 1: PRESENTATION =====
+package "Layer 1: Presentation Layer" #E3F2FD {
+    rectangle "User Interface" as UI {
+        component "Student Views\n(Browse Events, Claim Tickets)" as StudentUI
+        component "Organizer Views\n(Create/Manage Events, Scan QR)" as OrganizerUI
+        component "Admin Views\n(Moderate Events, Approve Organizers)" as AdminUI
+    }
+    
+    rectangle "Web Server" as WebServer {
+        component "Express.js\n(HTTP Server)" as Express
+        component "EJS Templates\n(View Rendering)" as EJS
+    }
+}
+
+' ===== LAYER 2: APPLICATION =====
+package "Layer 2: Application Layer" #FFF9C4 {
+    rectangle "Routes & Controllers" as Routes {
+        component "Authentication Routes\n(Login, Register, Logout)" as AuthRoutes
+        component "Event Routes\n(Public, Organizer, Admin)" as EventRoutes
+        component "Ticket Routes\n(Claim, View, Scan)" as TicketRoutes
+    }
+    
+    rectangle "Middleware" as Middleware {
+        component "Session Authentication\n(Token Validation)" as AuthMiddleware
+        component "Authorization\n(Role-Based Access Control)" as AuthzMiddleware
+    }
+}
+
+' ===== LAYER 3: LOGIC =====
+package "Layer 3: Logic Layer" #E8F5E9 {
+    rectangle "Services" as Services {
+        component "Event Management\n(Create, Approve, Publish)" as EventService
+        component "Ticket Management\n(Claim, Validate, Use)" as TicketService
+        component "User Management\n(Organizer Approval, Roles)" as UserService
+        component "Analytics\n(Statistics, Trends)" as AnalyticsService
+    }
+    
+    rectangle "Rules" as Rules {
+        component "Validation\n(Input Sanitization)" as Validation
+        component "Access Control\n(Permissions)" as AccessControl
+    }
+}
+
+' ===== LAYER 4: DATA ACCESS =====
+package "Layer 4: Data Access Layer" #FFEBEE {
+    rectangle "ORM" as ORM {
+        component "Prisma Client\n(Database Abstraction)" as Prisma
+        component "Query Builder\n(Type-Safe Queries)" as QueryBuilder
+    }
+    
+    rectangle "Data Models" as Models {
+        component "User Model" as UserModel
+        component "Event Model" as EventModel
+        component "Ticket Model" as TicketModel
+        component "Organization Model" as OrgModel
+    }
+}
+
+' ===== LAYER 5: DATABASE =====
+package "Layer 5: Data Storage Layer" #E0F2F1 {
+    database "SQLite Database" as DB {
+        component "Tables:\nUser, Event, Ticket,\nOrganization, Session" as Tables
+    }
+}
+
+' ===== EXTERNAL SERVICES =====
+package "External Services" #F5F5F5 {
+    component "QR Code Library\n(qrcode)" as QRLib
+    component "Image Processing\n(Jimp, jsQR)" as ImageLib
+}
+
+' ===== CONNECTIONS BETWEEN LAYERS =====
+UI -down-> Express : HTTP Requests
+Express -down-> Routes : Route Handling
+Routes -down-> Middleware : Authentication Check
+Middleware -down-> Services : Operations
+Services -down-> Validation : Validate Input
+Services -down-> AccessControl : Check Permissions
+Services -down-> Prisma : Database Queries
+Prisma -down-> Models : Use Models
+Models -down-> DB : SQL Operations
+
+' External Services
+TicketService -right-> QRLib : Generate QR
+TicketService -right-> ImageLib : Process Image
+
+' ===== ANNOTATIONS =====
+note right of UI
+    **User Roles:**
+    • Student: Browse and claim tickets
+    • Organizer: Create and manage events
+    • Admin: Moderate platform
+end note
+
+note right of Middleware
+    **Security:**
+    • Session-based authentication
+    • SHA-256 token hashing
+    • Role-based authorization
+    • 7-day session expiration
+end note
+
+note right of Services
+    **Key Operations:**
+    • Event lifecycle management
+    • Ticket capacity enforcement
+    • Organizer approval workflow
+    • Real-time analytics
+end note
+@enduml
