@@ -18,7 +18,6 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
-    "devstart": "nodemon app.js",
     "seed": "node prisma/seed.js",
     "prisma:gen": "prisma generate"
   },

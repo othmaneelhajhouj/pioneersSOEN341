@@ -62,7 +62,7 @@ jobs:
       
       - name: Run all tests with coverage
         working-directory: ./app
-        run: npm run test:coverage -- --runInBand
+        run: npm run test:coverage -- --selectProjects=organizer-tests --runInBand
 
       - name: Archive test results
         if: always()
@@ -80,8 +80,13 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            const path = require('path');
             
-            const coveragePath = 'app/coverage/coverage-summary.json';
+            const coveragePath = path.join(process.cwd(), 'app', 'coverage', 'coverage-summary.json');
+            
+            console.log('Looking for coverage at:', coveragePath);
+            console.log('Current directory:', process.cwd());
+            console.log('Directory contents:', fs.readdirSync('app/coverage').join(', '));
             
             if (!fs.existsSync(coveragePath)) {
               console.log('Coverage summary file not found');
@@ -91,13 +96,13 @@ jobs:
             const coverage = JSON.parse(fs.readFileSync(coveragePath, 'utf8'));
             const summary = coverage.total;
             
-            const comment = `## 🧪 Test Results\n\n` +
+            const comment = `##   Test Results\n\n` +
               `**Coverage Summary:**\n` +
               `- **Lines:** ${summary.lines.pct}%\n` +
               `- **Statements:** ${summary.statements.pct}%\n` +
               `- **Functions:** ${summary.functions.pct}%\n` +
               `- **Branches:** ${summary.branches.pct}%\n\n` +
-              `✅ Tests completed with coverage report!`;
+              `  Tests completed with coverage report!`;
             
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
