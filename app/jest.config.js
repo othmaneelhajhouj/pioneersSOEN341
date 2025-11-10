@@ -1,35 +1,42 @@
 /**
  * JEST CONFIGURATION
  * Configure Jest for testing the Campus Events application
- * Supports both test/ (Othmane's TypeScript tests) and __tests__/ (Renato's organizer tests)
+ * Supports both test/ (Othmane's tests) and __tests__/ (Renato's tests)
  */
 
-/** @type {import('jest').Config} */
 module.exports = {
-  testEnvironment: 'node',
-  clearMocks: true,
-  coverageDirectory: 'coverage',
-  collectCoverageFrom: [
-    'dist/**/*.js',
-    'middlewares/**/*.js',
-    'controllers/**/*.js',
-    'lib/**/*.js',
-    '!dist/**/index.js',
-    '!dist/**/*.d.ts',
-    '!**/node_modules/**',
-  ],
   projects: [
+    // Othmane's tests
     {
-      // Othmane's tests in test/ directory
       displayName: 'test-suite',
-      testMatch: ['<rootDir>/test/**/*.test.js'],
+      testEnvironment: 'node',
+      roots: ['<rootDir>/test'],
+      testMatch: ['**/test/**/*.test.js'],
       setupFiles: ['<rootDir>/test/setupEnv.js'],
+      testTimeout: 30000,
     },
+    // Renato's organizer tests
     {
-      // Renato's organizer tests in __tests__/ directory
       displayName: 'organizer-tests',
-      testMatch: ['<rootDir>/__tests__/**/*.test.js'],
+      testEnvironment: 'node',
+      roots: ['<rootDir>/__tests__'],
+      testMatch: ['**/__tests__/**/*.test.js'],
+      collectCoverageFrom: [
+        'routes/**/*.js',
+        'controllers/**/*.js',
+        'middlewares/**/*.js',
+        'lib/**/*.js',
+        '!**/node_modules/**',
+        '!**/dist/**',
+        '!**/generated/**',
+      ],
+      coverageDirectory: 'coverage',
+      coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
+      moduleNameMapper: {
+        '^generated-prisma/client$': '<rootDir>/generated/prisma',
+      },
       setupFilesAfterEnv: ['<rootDir>/__tests__/setup.js'],
+      testTimeout: 30000,
     },
   ],
 };
