@@ -72,7 +72,9 @@
         <% if (typeof navActions !== 'undefined' && navActions) { %>
           <%- navActions %>
         <% } else if (isLoggedIn) { %>
-          <a class="btn btn-outline-light btn-sm px-3" href="/profile">My Profile</a>
+          <a class="btn btn-outline-light btn-sm px-3" href="/profile">
+            <i class="fa-solid fa-user me-1"></i>My Profile
+          </a>
           <form method="post" action="/logout" class="d-inline">
             <button type="submit" class="btn btn-primary btn-sm px-3">Logout</button>
           </form>
