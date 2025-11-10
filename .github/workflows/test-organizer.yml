@@ -62,7 +62,7 @@ jobs:
       
       - name: Run all tests with coverage
         working-directory: ./app
-        run: npm run test:coverage -- --runInBand
+        run: npm run test:coverage -- --selectProjects=organizer-tests --runInBand
 
       - name: Archive test results
         if: always()
