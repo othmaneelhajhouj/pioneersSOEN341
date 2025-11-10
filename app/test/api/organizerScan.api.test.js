@@ -2,7 +2,6 @@
 const express = require('express');
 const request = require('supertest');
 const bodyParser = require('body-parser');
-const multer = require('multer');
 const {prisma} = require('../../dist/db');
 const {organizerScan} = require('../../dist/routes/organizerScan');
 
@@ -12,7 +11,7 @@ function makeScanApp(user) {
   const app = express();
   app.use(bodyParser.json());
   app.use((req, _res, next) => {
-    if (user) req.user = user; 
+    if (user) req.user = {id: String(user.id), role: user.role, organizerStatus: user.organizerStatus ?? 'approved',};
     next();
   });
   app.use(organizerScan);
@@ -67,6 +66,7 @@ beforeAll(async () => {
     const app = makeScanApp(null);
     const res = await request(app)
       .post(`/organizers/${organizer.id}/events/${event.id}/scan`)
+      .set('Accept', 'application/json')
       .send({qrToken: 'ABC123TOKEN'});
     expect(res.status).toBe(401);
   });
@@ -78,6 +78,7 @@ beforeAll(async () => {
     const app = makeScanApp({id: other.id, role: 'organizer'});
     const res = await request(app)
       .post(`/organizers/${organizer.id}/events/${event.id}/scan`)
+      .set('Accept', 'application/json')
       .send({qrToken: 'ABC123TOKEN'});
     expect(res.status).toBe(403);
   });
@@ -86,7 +87,13 @@ beforeAll(async () => {
     const app = makeScanApp({id: organizer.id, role: 'organizer'});
     const res = await request(app)
       .post(`/organizers/${organizer.id}/events/${event.id}/scan`)
+      .set('Accept', 'application/json')
       .send({ qrToken: 'ABC123TOKEN' });
+
+      if (res.status !== 200) {
+      console.log('owner first scan:', res.status, res.body);
+      }
+
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ok: true, state: 'checked_in'});
   });
@@ -95,6 +102,7 @@ beforeAll(async () => {
     const app = makeScanApp({id: organizer.id, role: 'organizer'});
     const res = await request(app)
       .post(`/organizers/${organizer.id}/events/${event.id}/scan`)
+      .set('Accept', 'application/json')
       .send({qrToken: 'ABC123TOKEN'});
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ok: false, state: 'already_used'});
@@ -104,6 +112,7 @@ beforeAll(async () => {
     const app = makeScanApp({id: organizer.id, role: 'organizer'});
     const res = await request(app)
       .post(`/organizers/${organizer.id}/events/${event.id}/scan`)
+      .set('Accept', 'application/json')
       .send({qrToken: 'NOPE'});
     expect(res.status).toBe(404);
     expect(res.body.state).toBe('not_found');
@@ -116,6 +125,7 @@ beforeAll(async () => {
     });
     const res = await request(app)
       .post(`/organizers/${organizer.id}/events/${event.id}/scan`)
+      .set('Accept', 'application/json')
       .send({qrToken: 'ADMINOK'});
     expect(res.status).toBe(200);
     expect(res.body.state).toBe('checked_in');
@@ -123,11 +133,17 @@ beforeAll(async () => {
 
   test('scan-image: 200 check-in with mocked decode', async () => {
     jest.resetModules();
-    jest.doMock('jsqr', () => () => ({data: 'IMGQR'}));
+    jest.doMock('jsqr', () => ({
+      __esModule: true,
+      default: () => ({ data: 'IMGQR' }),
+    }));
+
     jest.doMock('jimp', () => ({
-      read: async () => ({
-        bitmap: { data: Buffer.alloc(2 * 2 * 4), width: 2, height: 2 },
-      }),
+      Jimp: {
+        read: async () => ({
+          bitmap: { data: Buffer.alloc(2 * 2 * 4), width: 2, height: 2 },
+        }),
+      },
     }));
     
   let mockedRouter;
@@ -136,7 +152,7 @@ beforeAll(async () => {
   });
 
     const app = require('express')();
-    app.use((req, _res, next) => {req.user = {id: organizer.id, role: 'organizer'}; next();});
+    app.use((req, _res, next) => {req.user = {id: String(organizer.id), role: 'organizer', organizerStatus: 'approved',}; next();});
     app.use(mockedRouter);
 
     await prisma.ticket.create({
