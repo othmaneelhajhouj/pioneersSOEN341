@@ -4,10 +4,11 @@ const {prisma} = require('../../dist/db');
 const uniq = `${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
 
 // discovery function the app uses to filter events
-async function  listPublished({dateFrom, dateTo, category, location}) {
+async function  listPublished({dateFrom, dateTo, category, location, organizerId}) {
   return prisma.event.findMany({
     where: {
       published: true,
+      ...(organizerId ? { organizerId } : {}),
       ...(category ? {category} : {}),
       ...(location ? {location: {contains: location}} : {}),
       ...(dateFrom || dateTo? {startsAt: {...(dateFrom ? {gte: dateFrom} : {}), ...(dateTo ? {lte: dateTo} : {}) }}
@@ -18,11 +19,13 @@ async function  listPublished({dateFrom, dateTo, category, location}) {
 }
 
 describe('event discovery', () => {
+  let orgId;
 
   beforeAll(async () => {
     const u = await prisma.user.create({
       data: { email: `org+${uniq}@example.com`, passwordHash: 'x', firstName: 'Org', role: 'organizer', organizerStatus: 'approved' },
     });
+    orgId = u.id;
 
     // base fields for all test events (i.e. all events published)
     const base = {
@@ -50,6 +53,7 @@ describe('event discovery', () => {
 
   test('filters by category and date', async () => {
     const out = await listPublished({
+      organizerId: orgId, 
       category: 'tech',
       dateFrom: new Date('2025-12-31'),
       dateTo: new Date('2026-01-31'),
@@ -58,7 +62,7 @@ describe('event discovery', () => {
   });
 
   test('search by partial location', async () => {
-    const out = await listPublished({location: 'Hall'});
+    const out = await listPublished({ organizerId: orgId, location: 'Hall' });
     expect(out.length).toBe(2);
   });
 });
