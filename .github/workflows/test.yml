@@ -1,0 +1,48 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client (WASM) into app/generated/prisma
+        run: npx prisma generate --schema=prisma/schema.prisma
+        env:
+          PRISMA_CLIENT_ENGINE_TYPE: wasm
+
+      - name: Setup test database
+        run: |
+          mkdir -p .tmp
+          export DATABASE_URL="file:.tmp/test-ci.db"
+          npx prisma migrate deploy --schema=prisma/schema.prisma
+        env:
+          DATABASE_URL: file:.tmp/test-ci.db
+
+      - name: Build TypeScript to dist
+        run: npm run build
+
+      - name: Run tests with coverage
+        run: npm test -- --coverage --config jest.config.js
+        env:
+          NODE_ENV: test
+          DATABASE_URL: file:.tmp/test-ci.db
+          PRISMA_CLIENT_ENGINE_TYPE: wasm

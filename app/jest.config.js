@@ -3,24 +3,16 @@
  * Configure Jest for testing the Campus Events application
  */
 
+/** @type {import('jest').Config} */
 module.exports = {
   testEnvironment: 'node',
-  roots: ['<rootDir>/__tests__'],
-  testMatch: ['**/__tests__/**/*.test.js'],
-  collectCoverageFrom: [
-    'routes/**/*.js',
-    'controllers/**/*.js',
-    'middlewares/**/*.js',
-    'lib/**/*.js',
-    '!**/node_modules/**',
-    '!**/dist/**',
-    '!**/generated/**',
-  ],
+  roots: ['<rootDir>/test'],
+  setupFiles: ['<rootDir>/test/setupEnv.js'],
+  clearMocks: true,
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
-  moduleNameMapper: {
-    '^generated-prisma/client$': '<rootDir>/generated/prisma',
-  },
-  setupFilesAfterEnv: ['<rootDir>/__tests__/setup.js'],
-  testTimeout: 30000,
+  collectCoverageFrom: [
+    'dist/**/*.js',
+    '!dist/**/index.js',
+    '!dist/**/*.d.ts',
+  ],
 };
