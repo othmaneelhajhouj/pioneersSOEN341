@@ -4,7 +4,8 @@
   <meta charset="UTF-8" />
   <title><%= (ticket && ticket.event) ? `${ticket.event.title} Ticket` : 'Ticket' %> | Campus Events</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <%- include('../partials/nav', { active: 'my-events', injectStyles: true }) %>
+  <% const crumbs = (ticket && ticket.event) ? [{label:'My Events', href:'/my-events'}, {label: ticket.event.title, href:`/events/${ticket.event.id}`}, {label:'Ticket'}] : []; %>
+  <%- include('../partials/nav', { active: 'my-events', injectStyles: true, crumbs }) %>
 </head>
 <body>
 <main class="container py-5" style="max-width:640px;">
@@ -31,6 +32,13 @@
       <div class="card-body">
         <h1 class="h4 mb-3">Ticket for <%= event.title %></h1>
         <dl class="row gy-2 mb-4">
+          <dt class="col-sm-4 text-secondary">Ticket ID</dt>
+          <dd class="col-sm-8 mb-0">
+            <code id="ticketId"><%= ticket.id %></code>
+            <button class="btn btn-sm btn-outline-light ms-2" onclick="copyTicketId()" title="Copy ticket ID">
+              <i class="fa-solid fa-copy"></i>
+            </button>
+          </dd>
           <dt class="col-sm-4 text-secondary">Event time</dt>
           <dd class="col-sm-8 mb-0">
             <%= event.startsAt ? formatter.format(new Date(event.startsAt)) : '—' %>
@@ -71,5 +79,18 @@
   <% } %>
 </main>
 <%- include('../partials/footer') %>
+<script>
+  function copyTicketId() {
+    const ticketId = document.getElementById('ticketId').textContent;
+    navigator.clipboard.writeText(ticketId).then(() => {
+      const btn = event.target.closest('button');
+      const icon = btn.querySelector('i');
+      icon.className = 'fa-solid fa-check';
+      setTimeout(() => {
+        icon.className = 'fa-solid fa-copy';
+      }, 2000);
+    });
+  }
+</script>
 </body>
 </html>

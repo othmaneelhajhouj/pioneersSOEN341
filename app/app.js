@@ -4,6 +4,8 @@
  * Sets up Express server, middleware, routes, and error handling
  */
 
+// Load environment variables first
+require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const morgan = require('morgan');

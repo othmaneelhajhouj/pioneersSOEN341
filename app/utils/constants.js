@@ -1,7 +1,6 @@
 /**
  * APPLICATION CONSTANTS
- * Centralized location for configuration values and magic strings
- * This makes the code more maintainable and easier to update
+ * Centralized location for configuration values and strings
  */
 
 // Server configuration

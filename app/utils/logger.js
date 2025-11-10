@@ -37,8 +37,6 @@ function log(level, message, meta = {}) {
     ...meta,
   };
 
-  // In production, you might want to send these to a logging service
-  // For development, console is fine
   const output = `[${timestamp}] ${level}: ${message}`;
   
   switch (level) {

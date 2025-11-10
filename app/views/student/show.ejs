@@ -4,7 +4,8 @@
   <meta charset="UTF-8" />
   <title><%= loadError ? 'Event Not Found' : event.title %> | Campus Events</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <%- include('../partials/nav', { active: 'events', injectStyles: true }) %>
+  <% const crumbs = loadError ? [] : [{label:'Events', href:'/events'}, {label: event.title}]; %>
+  <%- include('../partials/nav', { active: 'events', injectStyles: true, crumbs }) %>
 </head>
 <body>
 <main class="container py-5" style="max-width:720px;">
@@ -133,5 +134,19 @@
   <% } %>
 </main>
 <%- include('../partials/footer') %>
+<script>
+  // Show success toast if ticket was just claimed
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('claimed') === '1') {
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3';
+    toast.style.zIndex = '9999';
+    toast.innerHTML = '<i class="fa-solid fa-circle-check me-2"></i>Ticket claimed successfully!';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+    // Clean URL
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+</script>
 </body>
 </html>

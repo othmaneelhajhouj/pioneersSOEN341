@@ -4,7 +4,7 @@
   --bg: oklch(0.16 0.006 84);      /* base background */
   --bg-light: oklch(0.22 0.006 84); /* used by --bg-2 in mixes/gradients */
   --ink: oklch(0.96 0.009 84);      /* used for text, focus, etc. */
-  --muted: oklch(0.75 0.010 84);   /* used for muted text */
+  --muted: oklch(0.78 0.010 84);   /* used for muted text - increased from 0.75 for better readability */
   --line: oklch(0.35 0.010 84);    /* used in border mixes */
   --gold: oklch(0.82 0.11 84);     /* used in gradients, focus ring */
   --vio: oklch(0.83 0.09 264);     /* used in gradients */
@@ -127,6 +127,9 @@ p {
 .navbar .nav-link:hover {
   color: var(--gold);
 }
+.navbar-brand:hover {
+  color: var(--ink);
+}
 
 /* Bootstrap card adjustments */
 .card {
@@ -147,15 +150,46 @@ p {
   background: var(--mix-panel-alt);
 }
 
+/* Code elements */
+code {
+  background: var(--mix-panel-dim);
+  color: var(--gold);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+  border: 1px solid var(--mix-border-faint);
+}
+
 /* Bootstrap button overrides */
 .btn-primary {
   --bs-btn-bg: var(--gold);
   --bs-btn-border-color: var(--gold);
   --bs-btn-hover-bg: color-mix(in oklab, var(--gold) 80%, black);
+  --bs-btn-color: #111;
+  color: #111;
 }
 .btn-outline-light {
   --bs-btn-color: var(--ink);
   --bs-btn-border-color: var(--line);
+}
+
+/* File input styling */
+.form-control[type="file"] {
+  color: var(--ink);
+}
+.form-control[type="file"]::file-selector-button,
+.form-control[type="file"]::-webkit-file-upload-button {
+  background: var(--gold);
+  color: #111;
+  border: none;
+  padding: 0.375rem 0.75rem;
+  margin-right: 0.75rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+}
+.form-text {
+  color: var(--muted);
 }
 
 /* Progress */
@@ -193,6 +227,30 @@ p {
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
 
+/* Scroll to top button */
+#scrollTopBtn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999;
+  display: none;
+  padding: 10px 15px;
+  background: var(--gold);
+  color: #111;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transition: opacity 0.3s, transform 0.3s;
+}
+#scrollTopBtn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+}
+#scrollTopBtn.show {
+  display: block;
+}
+
 /*Cards & chips & meters*/
 .row-card {
   background: var(--mix-panel);
@@ -215,6 +273,24 @@ p {
 }
 .o-sub { color: var(--muted); font-size: 12.5px; }
 .helper { color: var(--muted); font-size: 12px; }
+
+/* Table text should be more visible */
+table {
+  color: var(--ink);
+}
+
+table thead {
+  color: var(--ink);
+}
+
+table tbody {
+  color: var(--ink);
+}
+
+table td, table th {
+  color: inherit;
+}
+
 .spacer { height: 12px; width: 100%; }
 .meter {
   width: 100%;
@@ -270,6 +346,7 @@ p {
   text-align: center;
   font-size: 12px;
   font-weight: 800;
+  -webkit-user-select: none;
   user-select: none;
   z-index: 1;
 }

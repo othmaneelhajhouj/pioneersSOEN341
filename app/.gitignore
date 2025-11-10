@@ -4,3 +4,4 @@ generated
 prisma/dev.db
 dist/
 prisma/prisma/
+coverage/

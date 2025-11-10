@@ -22,6 +22,15 @@ tickets.post("/events/:id/tickets/claim", async (req: Request, res: Response) =>
             return res.status(401).json({error: "Authentication required."});
         }
 
+        // Only students can claim tickets
+        if(req.user.role !== "student")
+        {
+            if(wantsJson(req)) {
+                return res.status(403).json({error: "Only students can claim tickets."});
+            }
+            return res.redirect(`/events/${req.params.id}?error=role`);
+        }
+
         const {id: userId} = req.user!;
         const eventId = req.params.id;
         const result = await claimTicket({eventId, userId});
