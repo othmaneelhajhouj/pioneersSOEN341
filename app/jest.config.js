@@ -6,6 +6,7 @@
 
 module.exports = {
   testTimeout: 30000,
+  coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
   projects: [
     // Othmane's tests
     {
@@ -31,7 +32,6 @@ module.exports = {
         '!**/generated/**',
       ],
       coverageDirectory: '<rootDir>/coverage',
-      coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
       moduleNameMapper: {
         '^generated-prisma/client$': '<rootDir>/generated/prisma',
       },
