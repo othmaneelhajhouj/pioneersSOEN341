@@ -123,7 +123,7 @@ beforeAll(async () => {
 
   test('scan-image: 200 check-in with mocked decode', async () => {
     jest.resetModules();
-    jest.doMock('jsqr', () => () => ({data: 'IMGQR'}), { virtual: true });
+    jest.doMock('jsqr', () => () => ({data: 'IMGQR'}));
     jest.doMock('jimp', () => ({
       read: async () => ({
         bitmap: { data: Buffer.alloc(2 * 2 * 4), width: 2, height: 2 },
