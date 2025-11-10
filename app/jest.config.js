@@ -5,6 +5,7 @@
  */
 
 module.exports = {
+  testTimeout: 30000,
   projects: [
     // Othmane's tests
     {
@@ -13,7 +14,6 @@ module.exports = {
       roots: ['<rootDir>/test'],
       testMatch: ['**/test/**/*.test.js'],
       setupFiles: ['<rootDir>/test/setupEnv.js'],
-      testTimeout: 30000,
     },
     // Renato's organizer tests
     {
@@ -36,7 +36,6 @@ module.exports = {
         '^generated-prisma/client$': '<rootDir>/generated/prisma',
       },
       setupFilesAfterEnv: ['<rootDir>/__tests__/setup.js'],
-      testTimeout: 30000,
     },
   ],
 };
