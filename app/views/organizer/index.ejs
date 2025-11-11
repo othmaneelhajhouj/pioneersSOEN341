@@ -128,6 +128,9 @@
         <div class="insight-label" id="metricLiveEvents">Live events</div>
         <div class="insight-value" id="insightLiveCount"><%= publishedCount %></div>
         <div class="insight-helper" id="insightDraftHelper"><%= draftCount %> draft<%= draftCount === 1 ? '' : 's' %> ready to go</div>
+        <% if (summary && (summary.pendingModerationCount || summary.rejectedCount)) { %>
+          <div class="insight-helper" style="margin-top: 4px; color: #f59e0b;"><i class="fa-solid fa-hourglass-half"></i> <%= summary.pendingModerationCount || 0 %> awaiting moderation<% if (summary.rejectedCount) { %>, <%= summary.rejectedCount %> rejected<% } %></div>
+        <% } %>
       </div>
     </article>
 
@@ -199,10 +202,30 @@
         <!-- Event Header: Title and Status -->
         <div class="event-header">
           <div class="o-title"><%= e.title %></div>
-          <span class="status-chip <%= e.published ? 'live' : '' %>">
-            <i class="fa-solid <%= e.published ? 'fa-signal' : 'fa-pen-to-square' %>"></i>
-            <span class="status-label"><%= e.published ? 'Published' : 'Draft' %></span>
-          </span>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span class="status-chip <%= e.published ? 'live' : '' %>">
+              <i class="fa-solid <%= e.published ? 'fa-signal' : 'fa-pen-to-square' %>"></i>
+              <span class="status-label"><%= e.published ? 'Published' : 'Draft' %></span>
+            </span>
+            <% if (e.moderationStatus) { %>
+              <% if (e.moderationStatus === 'pending') { %>
+                <span class="status-chip" style="background: #fef3c7; color: #92400e; border-color: #fde68a;">
+                  <i class="fa-solid fa-hourglass-half"></i>
+                  <span class="status-label">Pending Approval</span>
+                </span>
+              <% } else if (e.moderationStatus === 'approved') { %>
+                <span class="status-chip" style="background: #d1fae5; color: #065f46; border-color: #a7f3d0;">
+                  <i class="fa-solid fa-check-circle"></i>
+                  <span class="status-label">Approved</span>
+                </span>
+              <% } else if (e.moderationStatus === 'rejected') { %>
+                <span class="status-chip" style="background: #fee2e2; color: #991b1b; border-color: #fecaca;">
+                  <i class="fa-solid fa-times-circle"></i>
+                  <span class="status-label">Rejected</span>
+                </span>
+              <% } %>
+            <% } %>
+          </div>
         </div>
 
         <!-- Event Metadata: Date, Time, Location -->
