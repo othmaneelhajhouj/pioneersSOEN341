@@ -71,6 +71,7 @@ const event_index_student = async (req,res) => {
 
       //default
       published: true,
+      moderationStatus: "approved",
 
       //Date filters
       ...(from || to 
@@ -164,7 +165,7 @@ const event_ics = async (req, res) => {
 
     //load published event
     const ev = await prisma.event.findFirst({
-      where: {id: req.params.id, published: true},
+      where: {id: req.params.id, published: true, moderationStatus: "approved"},
       select: {
         id:true,
         title:true,
@@ -259,7 +260,7 @@ const event_ics = async (req, res) => {
 const event_details_student = async (req, res) => {
   try {
     const event = await prisma.event.findFirst({
-      where: { id: req.params.id, published: true },
+      where: { id: req.params.id, published: true, moderationStatus: "approved" },
       include: {
         organizer: { select: { id: true, firstName: true, lastName: true } },
         _count: { select: { tickets: true } },
@@ -384,6 +385,9 @@ const event_index_organizer = async (req, res) => {
       ticketsSoldTotal: 0,
       capacityTotal: 0,
       checkedInTotal: 0,
+      pendingModerationCount: 0,
+      approvedCount: 0,
+      rejectedCount: 0,
     };
 
     const normalizedEvents = events.map((event) => {
@@ -403,6 +407,11 @@ const event_index_organizer = async (req, res) => {
       } else {
         totals.draftCount += 1;
       }
+
+      // Track moderation status
+      if (event.moderationStatus === 'pending') totals.pendingModerationCount += 1;
+      if (event.moderationStatus === 'approved') totals.approvedCount += 1;
+      if (event.moderationStatus === 'rejected') totals.rejectedCount += 1;
 
       return {
         ...rest,
