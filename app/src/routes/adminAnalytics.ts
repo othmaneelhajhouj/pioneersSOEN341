@@ -4,7 +4,7 @@ import { getAdminAnalytics } from "../services/adminAnalyticsService";
 
 export const adminAnalytics = Router();
 
-adminAnalytics.get("/analytics", adminOnly, async(_req: Request, res: Response) => {
+adminAnalytics.get("/analytics/data", adminOnly, async(_req: Request, res: Response) => {
     try{
         const data = await getAdminAnalytics();
         return res.json(data);

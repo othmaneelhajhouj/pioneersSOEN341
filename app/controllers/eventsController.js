@@ -66,7 +66,7 @@ const event_index_student = async (req,res) => {
 
     //prisma where only fills a filter if its corresponding query param exists. default filter: published = true. prevents filtering category: null etc
 
-    /**@type {(import('generated-prisma/client')).Prisma.EventWhereInput}*/
+    /**@type {(import('../generated/prisma')).Prisma.EventWhereInput}*/
     const where = {
 
       //default
