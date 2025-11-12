@@ -8,11 +8,13 @@ on:
     branches: [ main, Renato ]
     paths:
       - 'app/**'
+      - 'Docker/**'
       - '.github/workflows/test-organizer.yml'
   pull_request:
     branches: [ main, Renato ]
     paths:
       - 'app/**'
+      - 'Docker/**'
 
 permissions:
   contents: read
