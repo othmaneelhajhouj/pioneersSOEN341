@@ -20,11 +20,6 @@ module.exports = {
     {
       displayName: 'organizer-tests',
       testEnvironment: 'node',
-      testEnvironmentOptions: {
-        // Workaround for Node.js v25+ localStorage issue
-        // See: https://github.com/jestjs/jest/issues/15888
-        customExportConditions: ['node', 'node-addons'],
-      },
       roots: ['<rootDir>/__tests__'],
       testMatch: ['**/__tests__/**/*.test.js'],
       collectCoverageFrom: [
