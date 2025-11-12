@@ -129,7 +129,7 @@
         <div class="insight-value" id="insightLiveCount"><%= publishedCount %></div>
         <div class="insight-helper" id="insightDraftHelper"><%= draftCount %> draft<%= draftCount === 1 ? '' : 's' %> ready to go</div>
         <% if (summary && (summary.pendingModerationCount || summary.rejectedCount)) { %>
-          <div class="insight-helper" style="margin-top: 4px; color: #f59e0b;"><i class="fa-solid fa-hourglass-half"></i> <%= summary.pendingModerationCount || 0 %> awaiting moderation<% if (summary.rejectedCount) { %>, <%= summary.rejectedCount %> rejected<% } %></div>
+          <div class="insight-helper" style="margin-top: 4px; color: var(--warning-color);"><i class="fa-solid fa-hourglass-half"></i> <%= summary.pendingModerationCount || 0 %> awaiting moderation<% if (summary.rejectedCount) { %>, <%= summary.rejectedCount %> rejected<% } %></div>
         <% } %>
       </div>
     </article>

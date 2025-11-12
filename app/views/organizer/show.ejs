@@ -66,17 +66,17 @@
           </span>
           <% if (event.moderationStatus) { %>
             <% if (event.moderationStatus === 'pending') { %>
-              <span class="status-chip" style="background: #fef3c7; color: #92400e; border-color: #fde68a;">
+              <span class="status-chip status-chip--pending">
                 <i class="fa-solid fa-hourglass-half"></i>
                 <span class="status-label">Pending Approval</span>
               </span>
             <% } else if (event.moderationStatus === 'approved') { %>
-              <span class="status-chip" style="background: #d1fae5; color: #065f46; border-color: #a7f3d0;">
+              <span class="status-chip status-chip--approved">
                 <i class="fa-solid fa-check-circle"></i>
                 <span class="status-label">Approved</span>
               </span>
             <% } else if (event.moderationStatus === 'rejected') { %>
-              <span class="status-chip" style="background: #fee2e2; color: #991b1b; border-color: #fecaca;">
+              <span class="status-chip status-chip--rejected">
                 <i class="fa-solid fa-times-circle"></i>
                 <span class="status-label">Rejected</span>
               </span>
@@ -89,7 +89,7 @@
             <%= event.moderationReason %>
           </div>
         <% } else if (event.moderationStatus === 'pending') { %>
-          <div class="helper" style="color: #92400e; margin-top: 4px;">
+          <div class="helper" style="color: var(--warning); margin-top: 4px;">
             <i class="fa-solid fa-info-circle"></i> This event is awaiting admin approval before it will be visible to students.
           </div>
         <% } %>
