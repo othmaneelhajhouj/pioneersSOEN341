@@ -1,12 +1,21 @@
-FROM node:25.1-alpine
+FROM node:25.1-alpine AS builder
+
+WORKDIR /src
+COPY app/package*.json ./
+RUN npm ci
+
+COPY app/. ./
+RUN npm run prisma:generate
+RUN npm run build
+
+FROM node:25.1-alpine AS runtime
 
 WORKDIR /app
-COPY app/package*.json ./
-RUN npm install
+ENV NODE_ENV=production
 
-COPY app/. .
-RUN npm run build
-RUN npm run prisma:generate
-RUN npx prisma migrate deploy
+COPY --from=builder /src ./
+COPY Docker/entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
+
 EXPOSE 3000
-CMD ["node", "app.js"]
+ENTRYPOINT ["/app/entrypoint.sh"]

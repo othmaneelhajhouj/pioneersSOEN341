@@ -4,4 +4,10 @@ services:
       context: ..
       dockerfile: Docker/Dockerfile
     ports:
-      - "3000:3000"      
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/prisma/dev.db
+    volumes:
+      # Persist the Prisma SQLite database between restarts
+      - ../app/prisma:/app/prisma
