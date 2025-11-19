@@ -81,6 +81,13 @@ model Event {
   moderationStatus ModerationStatus @default(pending)
   moderationReason String?
   category String?
+  formattedAddress String?
+  latitude Float?
+  longitude Float?
+  geocodeStatus String @default("pending")
+  geocodePrecision Int?
+  geocodedAt DateTime?
+  geocodeMessage String?
 
   @@index([type])
   @@index([startsAt])
