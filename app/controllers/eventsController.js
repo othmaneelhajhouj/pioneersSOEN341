@@ -814,8 +814,17 @@ const event_generate_image = async (req, res) => {
     // Auto-generate prompt from event data if needed
     const event = await prisma.event.findUnique({ 
       where: { id: eventId },
-      select: { title: true, description: true, location: true, type: true }
+      select: { title: true, description: true, location: true, type: true, organizerId: true }
     });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    // Verify event belongs to this organizer
+    if (event.organizerId !== req.organizerId) {
+      return res.status(403).json({ error: 'You cannot generate images for another organizer\'s event' });
+    }
 
     const finalPrompt = prompt || 
       `Event banner for "${event.title}". ${event.description}. Location: ${event.location}. ${event.type} event.`;
