@@ -273,14 +273,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if(!target) return;
     
     const action = target.getAttribute('data-action');
-    console.log('Action button clicked:', action);
     
     // Only handle banner modal actions
     if(action === 'accept-banner'){
-      console.log('Accepting banner...');
       await acceptBanner();
     } else if(action === 'regenerate-banner'){
-      console.log('Regenerating banner...');
       // Clean up temp file before regenerating
       if(pendingBanner?.imagePath){
         try {
