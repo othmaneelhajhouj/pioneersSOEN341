@@ -278,14 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if(action === 'accept-banner'){
       await acceptBanner();
     } else if(action === 'regenerate-banner'){
-      // Clean up temp file before regenerating
-      if(pendingBanner?.imagePath){
-        try {
-          await fetch(pendingBanner.imagePath, { method: 'DELETE' }).catch(() => {});
-        } catch(e) {
-          // Silent cleanup failure
-        }
-      }
       pendingBanner = null;
       const modal = bootstrap.Modal.getInstance(previewModal);
       if(modal) modal.hide();
