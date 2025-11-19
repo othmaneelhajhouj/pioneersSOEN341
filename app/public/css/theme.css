@@ -440,6 +440,16 @@ table td, table th {
   height: auto;
   display: block;
   object-fit: cover;
+  max-height: 400px;
+}
+
+@media (max-width: 768px) {
+  .event-banner-visual {
+    min-height: 150px;
+  }
+  .event-banner-image {
+    max-height: 250px;
+  }
 }
 
 .event-banner-placeholder {
@@ -471,6 +481,27 @@ table td, table th {
 }
 .modal-dialog {
   z-index: 1060 !important;
+}
+
+/* Modal responsiveness */
+@media (max-width: 576px) {
+  .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+  #bannerPreviewModal .modal-body {
+    padding: 1rem;
+  }
+}
+
+/* Loading state for buttons */
+.btn .btn-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.hidden {
+  display: none !important;
 }
 
 .grid-meta {
