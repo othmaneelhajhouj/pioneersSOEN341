@@ -835,6 +835,11 @@ const event_generate_image = async (req, res) => {
     const tempRelativePath = `/event-images/${tempFileName}`;
     const tempOutputPath = path.join(__dirname, '..', 'public', 'event-images', tempFileName);
 
+    // Ensure the directory exists before writing the file
+    const imageDir = path.join(__dirname, '..', 'public', 'event-images');
+    if (!existsSync(imageDir)) {
+      await mkdir(imageDir, { recursive: true });
+    }
     await writeFile(tempOutputPath, output);
     
     // Return temp path for preview (DB not updated yet)
