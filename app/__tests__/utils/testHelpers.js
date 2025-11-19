@@ -75,7 +75,7 @@ async function createTestUser(data = {}) {
  * Create a test session for a user
  */
 async function createTestSession(userId) {
-  const sessionToken = crypto.randomBytes(48).toString('hex');
+  const sessionToken = crypto.randomBytes(48).toString('hex'); 
   const tokenHash = crypto.createHash('sha256').update(sessionToken).digest('hex');
   
   const expiresAt = new Date();

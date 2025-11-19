@@ -6,12 +6,17 @@ on:
     types:
       - completed
 
+concurrency:
+  group: docker-build-${{ github.event.workflow_run.head_commit.id }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
+  packages: write
 
 jobs:
   build:
-    name: Build Docker Image
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
@@ -22,5 +27,19 @@ jobs:
           repository: ${{ github.event.workflow_run.head_repository.full_name }}
           ref: ${{ github.event.workflow_run.head_commit.id }}
 
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build container image
         run: docker compose -f Docker/docker-compose.yml build
+
+      - name: Tag and push image
+        run: |
+          docker tag docker-campus-events ghcr.io/${{ github.repository_owner }}/campus-events:latest
+          docker tag docker-campus-events ghcr.io/${{ github.repository_owner }}/campus-events:${{ github.event.workflow_run.head_commit.id }}
+          docker push ghcr.io/${{ github.repository_owner }}/campus-events:latest
+          docker push ghcr.io/${{ github.repository_owner }}/campus-events:${{ github.event.workflow_run.head_commit.id }}
