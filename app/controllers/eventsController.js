@@ -7,6 +7,11 @@
 const prisma = require('../lib/prisma');
 const { validateEventData, wantsJson } = require('../utils/validation');
 const { MESSAGES, DEFAULTS } = require('../utils/constants');
+const { writeFile, mkdir, unlink, rename } = require("fs/promises");
+const { existsSync } = require("fs");
+const path = require("path");
+const Replicate = require("replicate");
+const {geocodeAddress} = require('../lib/geocoding');
 
 /**
  * OLD GET /events - List all published events (student view)
@@ -28,6 +33,70 @@ const event_index_student = async (req, res) => {
   }
 };
 */
+
+/*
+ * Helper - Combines validated event data with geocode info 
+ */
+async function withGeocodeData(validatedData) {
+  try {
+    const geo = await geocodeAddress(validatedData.location);
+    if (geo.status !== 'ok') {
+      return {
+        data: {
+          ...validatedData,
+          geocodeStatus: geo.status,
+          geocodeMessage: geo.message || null,
+        },
+        mapbox: geo,
+      };
+    }
+    return {
+      data: {
+        ...validatedData,
+        formattedAddress: geo.formattedAddress,
+        latitude: geo.latitude,
+        longitude: geo.longitude,
+        geocodeStatus: 'ok',
+        geocodePrecision: geo.precision ?? null,
+        geocodedAt: new Date(),
+      },
+      mapbox: geo,
+    };
+  } catch (err) {
+    console.error('Geocoding failed:', err);
+    return {
+      data: {
+        ...validatedData,
+        geocodeStatus: 'failed',
+        geocodeMessage: err.message,
+      },
+      mapbox: {status: 'failed', message: err.message},
+    };
+  }
+}
+
+/*
+ * Helper - Reusable map payload 
+ */
+const buildMapPayload = (event) => {
+  if (event?.latitude && event?.longitude) {
+    const address = event.formattedAddress || event.location;
+    return {
+      hasMap: true,
+      lat: event.latitude,
+      lng: event.longitude,
+      address,
+      directionsUrl: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`,
+      status: event.geocodeStatus || 'ok',
+    };
+  }
+  return {
+    hasMap: false,
+    address: event?.formattedAddress || event?.location || '',
+    status: event?.geocodeStatus || 'unavailable',
+    message: event?.geocodeMessage || null,
+  };
+};
 
 /**
  * Get /events - List & filter all published events (student view) w/ pagination logic
@@ -259,12 +328,26 @@ const event_ics = async (req, res) => {
 const event_details_student = async (req, res) => {
   try {
     const event = await prisma.event.findFirst({
-      where: { id: req.params.id, published: true },
-      include: {
-        organizer: { select: { id: true, firstName: true, lastName: true } },
-        _count: { select: { tickets: true } },
-      }
-    });
+      where: { id: req.params.id, published: true, moderationStatus: "approved" },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        startsAt: true,
+        endsAt: true,
+        location: true,
+        type: true,
+        price: true,
+        capacity: true,
+        formattedAddress: true,
+        latitude: true,
+        longitude: true,
+        geocodeStatus: true,
+        geocodeMessage: true,
+        organizer: {select: {id: true, firstName: true, lastName: true}},
+        _count: {select: {tickets: true}},
+  },
+});
 
     const accepts = (req.headers.accept || "").toLowerCase();
     const prefersHtml = accepts.includes("text/html") || accepts.includes("*/*");
@@ -325,9 +408,12 @@ const event_details_student = async (req, res) => {
       endsAtTime: formatTime(event.endsAt),
     };
 
+    const map = buildMapPayload(event);
+
     if (!prefersHtml && wantsJson(req)) {
       return res.json({
         event,
+        map,
         stats: {
           ticketsClaimed,
           capacity,
@@ -341,6 +427,7 @@ const event_details_student = async (req, res) => {
 
     return res.render("student/show", {
       event,
+      map,
       stats: {
         ticketsClaimed,
         capacity,
@@ -474,22 +561,37 @@ const event_details_organizer = async (req, res) => {
   try {
     const organizerId = req.organizerId;
     const event = await prisma.event.findFirst({
-      where: { id: req.params.eventId, organizerId },
-      include: {
-        organizer: { 
-          select: { id: true, firstName: true, lastName: true, email: true } 
+      where: {id: req.params.eventId, organizerId},
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        startsAt: true,
+        endsAt: true,
+        location: true,
+        type: true,
+        price: true,
+        capacity: true,
+        formattedAddress: true,
+        latitude: true,
+        longitude: true,
+        geocodeStatus: true,
+        geocodeMessage: true,
+        organizer: {
+          select: {id: true, firstName: true, lastName: true, email: true},
         },
-        tickets: { 
-          include: { 
-            user: { 
-              select: { id: true, firstName: true, lastName: true, email: true } 
-            } 
-          } 
+        tickets: {
+          include: {
+            user: {
+              select: {id: true, firstName: true, lastName: true, email: true},
+            },
+          },
         },
-        _count: { select: { tickets: true } },
-      }
+        _count: {select: {tickets: true}},
+      },
     });
-    
+
+    const map = buildMapPayload(event);  
     const isJsonRequest = wantsJson(req);
     
     if (!event) {
@@ -504,7 +606,7 @@ const event_details_organizer = async (req, res) => {
     }
     
     if (isJsonRequest) {
-      return res.json(event);
+      return res.json({event, map});
     }
         
     const ticketsSold = event._count?.tickets ?? 0;
@@ -531,6 +633,7 @@ const event_details_organizer = async (req, res) => {
     return res.render("organizer/show", {
       organizerId,
       event,
+      map,
       analytics,
       errors: [],
       flash: req.query.created ? MESSAGES.EVENT_CREATED : null,
@@ -673,14 +776,19 @@ const event_create = async (req, res) => {
                      publishedRaw === 'on' || 
                      publishedRaw === 'true';
 
-    // Create the event in database
+
+    //Run Mapbox geocoding and merge its output into the validated data
+    const {data: geocodedData} = await withGeocodeData(validation.validatedData);
+
+    // Create the event in the database, with coordinates
     const event = await prisma.event.create({
       data: {
-        ...validation.validatedData,
+        ...geocodedData,
         organizerId,
         published,
       },
     });
+
 
     // Send appropriate response
     if (isJsonRequest) {
@@ -707,6 +815,48 @@ const event_create = async (req, res) => {
     });
   }
 };
+
+/**
+ * PATCH /organizers/:organizerId/events/:eventId - Update an event and refresh geocode data when the location changes
+ */
+
+const event_update = async (req, res) => {
+  try {
+    const organizerId = req.organizerId;
+    const eventId = req.params.eventId;
+    const isJsonRequest = wantsJson(req);
+    const validation = validateEventData(req.body);
+
+    if (!validation.isValid) {
+      const payload = {error: MESSAGES.VALIDATION_FAILED, details: validation.errors};
+      return isJsonRequest
+        ? res.status(400).json(payload)
+        : res.status(422).render('organizer/edit', {organizerId, eventId, errors: validation.errors, values: req.body});
+    }
+
+    const {data: geocodedData} = await withGeocodeData(validation.validatedData);
+
+    const updated = await prisma.event.updateMany({
+      where: {id: eventId, organizerId},
+      data: geocodedData,
+    });
+
+    if (!updated.count) {
+      return isJsonRequest
+        ? res.status(404).json({error: MESSAGES.EVENT_NOT_FOUND})
+        : res.status(404).render('organizer/show', {organizerId, event: null, errors: [MESSAGES.EVENT_NOT_FOUND]});
+    }
+
+    if (isJsonRequest) return res.json({ok: true, message: MESSAGES.EVENT_UPDATED});
+    return res.redirect(`/organizers/${organizerId}/events/${eventId}?updated=1`);
+
+  } catch (error) {
+    console.error('Error updating event:', error);
+    if (wantsJson(req)) return res.status(500).json({error: MESSAGES.EVENT_UPDATE_FAILED});
+    return res.status(500).render('organizer/edit', {organizerId: req.organizerId, eventId: req.params.eventId, errors: [MESSAGES.EVENT_UPDATE_FAILED], values: req.body || {},});
+  }
+};
+
 
 /**
  * DELETE /organizers/:organizerId/events/:eventId - Delete an event
@@ -812,6 +962,7 @@ module.exports = {
   event_details_organizer,
   event_export_attendees,
   event_create,
+  event_update,
   event_delete,
   event_publish,
   event_unpublish,
