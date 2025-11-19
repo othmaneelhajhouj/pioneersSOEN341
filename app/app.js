@@ -9,7 +9,7 @@ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const morgan = require('morgan');
-const { PrismaClient, OrganizerStatus } = require("generated-prisma/client");
+const { PrismaClient, OrganizerStatus } = require("./generated/prisma");
 const crypto = require("crypto");
 const QRCode = require('qrcode');
 const {
@@ -150,6 +150,11 @@ app.use('/', tickets);
 
 //mount compiled organizerScan router
 app.use('/', organizerScan);
+
+//adminViews router
+const { adminViews } = require('./dist/routes/adminViews');
+app.use('/admin', adminViews);
+
 
 //endpoint to check server health
 app.get('/health', (_req, res) => res.json({ok: true}));

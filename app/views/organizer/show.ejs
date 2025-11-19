@@ -59,12 +59,40 @@
       <!-- Status Card -->
       <div class="row-card" style="display:grid;gap:10px;">
         <div class="o-sub" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Status</div>
-        <div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <span class="status-chip <%= event.published ? 'live':'' %>">
             <i class="fa-solid <%= event.published ? 'fa-signal':'fa-pen-to-square' %>"></i>
             <span class="status-label"><%= event.published ? 'Published':'Draft' %></span>
           </span>
+          <% if (event.moderationStatus) { %>
+            <% if (event.moderationStatus === 'pending') { %>
+              <span class="status-chip status-chip--pending">
+                <i class="fa-solid fa-hourglass-half"></i>
+                <span class="status-label">Pending Approval</span>
+              </span>
+            <% } else if (event.moderationStatus === 'approved') { %>
+              <span class="status-chip status-chip--approved">
+                <i class="fa-solid fa-check-circle"></i>
+                <span class="status-label">Approved</span>
+              </span>
+            <% } else if (event.moderationStatus === 'rejected') { %>
+              <span class="status-chip status-chip--rejected">
+                <i class="fa-solid fa-times-circle"></i>
+                <span class="status-label">Rejected</span>
+              </span>
+            <% } %>
+          <% } %>
         </div>
+        <% if (event.moderationStatus === 'rejected' && event.moderationReason) { %>
+          <div class="alert alert-danger" style="margin-top: 8px; padding: 12px;">
+            <strong><i class="fa-solid fa-triangle-exclamation"></i> Rejection reason:</strong><br />
+            <%= event.moderationReason %>
+          </div>
+        <% } else if (event.moderationStatus === 'pending') { %>
+          <div class="helper" style="color: var(--warning); margin-top: 4px;">
+            <i class="fa-solid fa-info-circle"></i> This event is awaiting admin approval before it will be visible to students.
+          </div>
+        <% } %>
         <div class="helper">Created <%= formatDate(event.createdAt) %></div>
         <!-- Publish toggle switch -->
         <div class="event-controls" style="margin-top:4px;">

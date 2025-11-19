@@ -8,11 +8,13 @@ on:
     branches: [ main, Renato ]
     paths:
       - 'app/**'
+      - 'Docker/**'
       - '.github/workflows/test-organizer.yml'
   pull_request:
     branches: [ main, Renato ]
     paths:
       - 'app/**'
+      - 'Docker/**'
 
 permissions:
   contents: read
@@ -31,7 +33,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '25.x'
+          node-version: '25.1'
           cache: 'npm'
           cache-dependency-path: app/package-lock.json
       

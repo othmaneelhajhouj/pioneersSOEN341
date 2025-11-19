@@ -1,9 +1,26 @@
 import { Router, Request, Response } from "express";
 import { adminOnly } from "../middleware/adminOnly";
 import { setRoleBody } from "../validation";
-import { setRole } from "../services/adminRoleManagementService";
+import { setRole, getUsers } from "../services/adminRoleManagementService";
 
 export const adminRoleManagement = Router();
+
+adminRoleManagement.get("/users", adminOnly, async(req: Request, res: Response) => {
+    try {
+        const { role, search, cursor } = req.query;
+
+        const users = await getUsers({
+            role: role as string | undefined,
+            search: search as string | undefined,
+            cursor: cursor as string | undefined,
+        });
+
+        return res.json(users);
+    } catch(e: any) {
+        console.error('Error fetching users:', e);
+        return res.status(500).json({error: "Failed to fetch users."});
+    }
+});
 
 adminRoleManagement.post("/users/:id/role", adminOnly, async(req: Request, res: Response) => {
     const parsed = setRoleBody.safeParse(req.body);

@@ -1,0 +1,26 @@
+name: Docker Build
+
+on:
+  workflow_run:
+    workflows: ["Organizer Tests", "tests"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.workflow_run.head_repository.full_name }}
+          ref: ${{ github.event.workflow_run.head_commit.id }}
+
+      - name: Build container image
+        run: docker compose -f Docker/docker-compose.yml build

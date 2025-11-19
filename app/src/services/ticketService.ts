@@ -6,7 +6,7 @@ export async function claimTicket(opts: {eventId: string; userId: string}) {
     // Load a published event 
     const {eventId, userId} = opts;
     const ev = await prisma.event.findFirst({
-        where: {id: eventId, published: true},
+        where: {id: eventId, published: true, moderationStatus: "approved"},
         select: {id: true, capacity: true, type: true},
     });
 

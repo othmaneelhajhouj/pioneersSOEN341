@@ -48,21 +48,26 @@ function redirectTo(req, res, path) {
 
 router.get("/login", (req, res) => {
   if (req.user) {
-    return redirectTo(req, res, "/");
+    // If user is already logged in, redirect to next URL or home
+    const nextUrl = req.query.next || "/";
+    return redirectTo(req, res, nextUrl);
   }
   if (wantsJson(req)) {
     return res.json({ ok: true, form: "login" });
   }
-  return res.render("auth/login", { error: null, values: {} });
+  // Pass the next URL to the template so it can be included in the form
+  return res.render("auth/login", { error: null, values: {}, next: req.query.next || null });
 });
 
 router.post("/login", async (req, res) => {
   // Support both form submissions and JSON bodies.
   const { email, password } = req.body;
+  const nextUrl = req.query.next || req.body.next || "/";
+  
   if (!email || !password) {
     const error = "Email and password are required.";
     if (wantsJson(req)) return res.status(400).json({ error });
-    return res.status(400).render("auth/login", { error, values: { email } });
+    return res.status(400).render("auth/login", { error, values: { email }, next: nextUrl });
   }
 
   // Look up the user and compare their password hash.
@@ -73,7 +78,7 @@ router.post("/login", async (req, res) => {
   if (!user || !verifyPassword(password, user.passwordHash)) {
     const error = "Invalid email or password.";
     if (wantsJson(req)) return res.status(401).json({ error });
-    return res.status(401).render("auth/login", { error, values: { email } });
+    return res.status(401).render("auth/login", { error, values: { email }, next: nextUrl });
   }
 
   const { token, expiresAt } = await createSession(user.id);
@@ -87,10 +92,11 @@ router.post("/login", async (req, res) => {
         email: user.email,
         role: user.role,
       },
+      redirect: nextUrl,
     });
   }
 
-  return res.redirect("/");
+  return res.redirect(nextUrl);
 });
 
 // --- logout ---------------------------------------------------------------

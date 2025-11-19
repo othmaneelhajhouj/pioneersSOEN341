@@ -25,6 +25,7 @@ router.get("/", async (req, res) => {
     const upcomingRaw = await prisma.event.findMany({
       where: {
         published: true,
+        moderationStatus: "approved",
         startsAt: { gte: now },
       },
       orderBy: { startsAt: "asc" },
