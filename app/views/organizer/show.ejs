@@ -157,9 +157,10 @@
           </div>
         </div>
         <div class="event-banner-controls">
-          <button class="btn ghost" type="button" data-action="generate-image" data-event-id="<%= event.id %>">
-            <i class="fa-solid fa-magic-sparkles"></i>
-            <span><%= event.generatedBannerPath ? 'Regenerate banner' : 'Generate banner' %></span>
+          <button class="btn ghost" type="button" data-action="generate-image" data-event-id="<%= event.id %>" aria-label="<%= event.generatedBannerPath ? 'Regenerate AI banner' : 'Generate AI banner' %>">
+            <i class="fa-solid fa-magic-sparkles" aria-hidden="true"></i>
+            <span class="btn-text"><%= event.generatedBannerPath ? 'Regenerate banner' : 'Generate banner' %></span>
+            <span class="btn-loading hidden"><i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Generating...</span>
           </button>
           <a class="btn ghost <%= event.generatedBannerUrl ? '' : 'hidden' %>" data-ai-source target="_blank" rel="noopener" href="<%= event.generatedBannerUrl || '#' %>">
             <i class="fa-solid fa-up-right-from-square"></i> View source
@@ -256,18 +257,21 @@
       </div>
       <div class="modal-body">
         <div class="mb-3 text-center" style="border-radius: var(--radius); overflow: hidden; border: 1px solid var(--mix-border);">
-          <img id="previewBannerImage" src="" alt="Generated banner preview" class="img-fluid" style="width: 100%; height: auto; display: block;" />
+          <img id="previewBannerImage" src="" alt="Preview of AI-generated event banner" class="img-fluid" style="width: 100%; height: auto; display: block; max-height: 400px; object-fit: contain;" loading="lazy" />
         </div>
-        <div class="alert alert-info small">
-          <i class="fa-solid fa-lightbulb me-2"></i>This is your AI-generated banner. You can accept it or regenerate with a new prompt.
+        <div class="alert alert-info small" role="status">
+          <i class="fa-solid fa-lightbulb me-2" aria-hidden="true"></i>This is your AI-generated banner. You can accept it or regenerate with a new prompt.
+        </div>
+        <div id="bannerError" class="alert alert-danger small hidden" role="alert">
+          <i class="fa-solid fa-exclamation-triangle me-2" aria-hidden="true"></i><span id="bannerErrorMessage"></span>
         </div>
       </div>
       <div class="modal-footer border-secondary" style="gap: 8px; flex-wrap: wrap;">
-        <button type="button" class="btn btn-outline-light" data-action="regenerate-banner">
-          <i class="fa-solid fa-rotate me-1"></i>Regenerate
+        <button type="button" class="btn btn-outline-light" data-action="regenerate-banner" aria-label="Regenerate banner with new prompt">
+          <i class="fa-solid fa-rotate me-1" aria-hidden="true"></i>Regenerate
         </button>
-        <button type="button" class="btn btn-primary" data-action="accept-banner">
-          <i class="fa-solid fa-check me-1"></i>Accept & Use
+        <button type="button" class="btn btn-primary" data-action="accept-banner" aria-label="Accept and use this banner">
+          <i class="fa-solid fa-check me-1" aria-hidden="true"></i>Accept & Use
         </button>
       </div>
     </div>
