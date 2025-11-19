@@ -13,26 +13,7 @@ const path = require("path");
 const Replicate = require("replicate");
 const {geocodeAddress} = require('../lib/geocoding');
 
-/**
- * OLD GET /events - List all published events (student view)
- 
-const event_index_student = async (req, res) => {
-  try {
-    const events = await prisma.event.findMany({
-      where: { published: true },
-      orderBy: { startsAt: "asc" },
-      include: {
-        organizer: { select: { id: true, firstName: true, lastName: true } },
-        _count: { select: { tickets: true } }
-      }
-    });
-    return res.render('student/index', { events });
-  } catch (error) {
-    console.error('Error fetching events:', error);
-    res.status(500).json({ error: 'Failed to fetch events' });
-  }
-};
-*/
+const replicate = new Replicate();
 
 /*
  * Helper - Combines validated event data with geocode info 
@@ -135,11 +116,12 @@ const event_index_student = async (req,res) => {
 
     //prisma where only fills a filter if its corresponding query param exists. default filter: published = true. prevents filtering category: null etc
 
-    /**@type {(import('generated-prisma/client')).Prisma.EventWhereInput}*/
+    /**@type {(import('../generated/prisma')).Prisma.EventWhereInput}*/
     const where = {
 
       //default
       published: true,
+      moderationStatus: "approved",
 
       //Date filters
       ...(from || to 
@@ -233,7 +215,7 @@ const event_ics = async (req, res) => {
 
     //load published event
     const ev = await prisma.event.findFirst({
-      where: {id: req.params.id, published: true},
+      where: {id: req.params.id, published: true, moderationStatus: "approved"},
       select: {
         id:true,
         title:true,
@@ -471,6 +453,9 @@ const event_index_organizer = async (req, res) => {
       ticketsSoldTotal: 0,
       capacityTotal: 0,
       checkedInTotal: 0,
+      pendingModerationCount: 0,
+      approvedCount: 0,
+      rejectedCount: 0,
     };
 
     const normalizedEvents = events.map((event) => {
@@ -490,6 +475,11 @@ const event_index_organizer = async (req, res) => {
       } else {
         totals.draftCount += 1;
       }
+
+      // Track moderation status
+      if (event.moderationStatus === 'pending') totals.pendingModerationCount += 1;
+      if (event.moderationStatus === 'approved') totals.approvedCount += 1;
+      if (event.moderationStatus === 'rejected') totals.rejectedCount += 1;
 
       return {
         ...rest,
@@ -953,6 +943,133 @@ const event_unpublish = async (req, res) => {
   }
 };
 
+const event_generate_image = async (req, res) => {
+  try {
+    const rawPrompt = req.body?.prompt;
+    const prompt = typeof rawPrompt === 'string' ? rawPrompt.trim() : '';
+    const eventId = req.params?.eventId;
+
+    if (!eventId) {
+      return res.status(400).json({ error: 'Event ID is required' });
+    }
+
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    // Auto-generate prompt from event data if needed
+    const event = await prisma.event.findUnique({ 
+      where: { id: eventId },
+      select: { title: true, description: true, location: true, type: true, organizerId: true }
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    // Verify event belongs to this organizer
+    if (event.organizerId !== req.organizerId) {
+      return res.status(403).json({ error: 'You cannot generate images for another organizer\'s event' });
+    }
+
+    const finalPrompt = prompt || 
+      `Event banner for "${event.title}". ${event.description}. Location: ${event.location}. ${event.type} event.`;
+
+    const input = {
+      prompt: finalPrompt.slice(0, 1000),
+      aspect_ratio: '16:9',
+      output_format: 'png',
+      safety_filter_level: 'block_medium_and_above',
+    };
+
+    const output = await replicate.run('google/imagen-4', { input });
+    const imageUrl = typeof output?.url === 'function' ? output.url() : undefined;
+    
+    // Save to TEMP location (preview only, not final)
+    const tempFileName = `event-${eventId}-preview.png`;
+    const tempRelativePath = `/event-images/${tempFileName}`;
+    const tempOutputPath = path.join(__dirname, '..', 'public', 'event-images', tempFileName);
+
+    // Ensure the directory exists before writing the file
+    const imageDir = path.join(__dirname, '..', 'public', 'event-images');
+    if (!existsSync(imageDir)) {
+      await mkdir(imageDir, { recursive: true });
+    }
+    await writeFile(tempOutputPath, output);
+    
+    // Return temp path for preview (DB not updated yet)
+    res.json({ 
+      imagePath: tempRelativePath, 
+      imageUrl,
+      isPreview: true 
+    });
+  } catch (error) {
+    console.error('Error generating image:', error);
+    res.status(500).json({ error: 'Failed to generate image' });
+  }
+};
+
+const event_accept_banner = async (req, res) => {
+  try {
+    const eventId = req.params?.eventId;
+    const { previewPath } = req.body;
+
+    if (!eventId) {
+      return res.status(400).json({ error: 'Event ID is required' });
+    }
+
+    if (!previewPath) {
+      return res.status(400).json({ error: 'Preview path is required' });
+    }
+
+    // Authorization check: Only the organizer can accept/finalize the banner
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { organizerId: true }
+    });
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    if (!req.user || event.organizerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden: Only the event organizer can accept the banner' });
+    }
+    // Move from temp preview to final location
+    const tempFileName = `event-${eventId}-preview.png`;
+    const finalFileName = `event-${eventId}.png`;
+    const tempPath = path.join(__dirname, '..', 'public', 'event-images', tempFileName);
+    const finalPath = path.join(__dirname, '..', 'public', 'event-images', finalFileName);
+    
+    // Delete old banner if exists
+    if (existsSync(finalPath)) {
+      await unlink(finalPath);
+    }
+
+    // Move temp to final
+    await rename(tempPath, finalPath);
+
+    const finalRelativePath = `/event-images/${finalFileName}`;
+    const imageUrl = req.body.imageUrl;
+
+    // Now update database with final path
+    await prisma.event.update({
+      where: { id: eventId },
+      data: {
+        generatedBannerPath: finalRelativePath,
+        generatedBannerUrl: imageUrl,
+      },
+    });
+
+    res.json({ 
+      success: true,
+      imagePath: finalRelativePath, 
+      imageUrl 
+    });
+  } catch (error) {
+    console.error('Error accepting banner:', error);
+    res.status(500).json({ error: 'Failed to accept banner' });
+  }
+};
+
 // Export all controller functions
 module.exports = {
   event_index_student,
@@ -966,5 +1083,7 @@ module.exports = {
   event_delete,
   event_publish,
   event_unpublish,
-  event_ics
+  event_ics,
+  event_generate_image,
+  event_accept_banner
 };

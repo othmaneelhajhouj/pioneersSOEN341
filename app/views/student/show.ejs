@@ -33,6 +33,20 @@
     %>
     <article class="card bg-dark border-secondary shadow-sm">
       <div class="card-body">
+        <section class="event-banner mb-4">
+          <% if (event.generatedBannerPath) { %>
+            <img
+              src="<%= event.generatedBannerPath %>"
+              alt="AI-generated banner for <%= event.title %>"
+              class="event-banner-img"
+            />
+          <% } else { %>
+            <div class="event-banner-placeholder">
+              <i class="fa-solid fa-image fa-2x"></i>
+              <p class="helper mt-2">Custom banner coming soon.</p>
+            </div>
+          <% } %>
+        </section>
         <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
           <div>
             <h1 class="h3 mb-2"><%= event.title %></h1>

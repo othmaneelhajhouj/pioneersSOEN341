@@ -76,6 +76,8 @@ model Event {
   published   Boolean    @default(false)
   organizerId String
   organizer   User       @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Restrict)
+  generatedBannerPath String?
+  generatedBannerUrl  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   moderationStatus ModerationStatus @default(pending)

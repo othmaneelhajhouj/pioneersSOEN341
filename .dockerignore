@@ -1,0 +1,14 @@
+node_modules
+app/node_modules
+app/dist
+app/build
+app/coverage
+app/.tmp
+Docker/.env
+.git
+.gitignore
+.vscode
+.idea
+*.log
+Dockerfile
+Docker/docker-compose.yml

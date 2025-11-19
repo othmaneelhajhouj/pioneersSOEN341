@@ -45,4 +45,10 @@ router.delete('/:organizerId/events/:eventId', eventsController.event_delete);
 // Export attendees CSV
 router.get('/:organizerId/events/:eventId/attendees.csv', eventsController.event_export_attendees);
 
+// Generate an AI image for the event
+router.post('/:organizerId/events/:eventId/generate-image', eventsController.event_generate_image);
+
+// Accept and finalize the generated banner
+router.post('/:organizerId/events/:eventId/accept-banner', eventsController.event_accept_banner);
+
 module.exports = router;

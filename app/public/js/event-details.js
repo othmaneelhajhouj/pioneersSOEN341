@@ -168,4 +168,153 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // AI banner generation controls
+  const aiBannerButton = document.querySelector('[data-action="generate-image"]');
+  const bannerImage = document.querySelector('[data-ai-banner]');
+  const bannerPlaceholder = document.querySelector('[data-ai-placeholder]');
+  const bannerSourceLink = document.querySelector('[data-ai-source]');
+  const previewModal = document.getElementById('bannerPreviewModal');
+  const previewImage = document.getElementById('previewBannerImage');
+  
+  
+  let pendingBanner = null; // Store generated banner data before accepting
+
+  const setBannerLabel = (hasImage) => {
+    const label = aiBannerButton?.querySelector('span');
+    if(label) label.textContent = hasImage ? 'Regenerate banner' : 'Generate banner';
+  };
+
+  const updatePlaceholderText = (hasImage) => {
+    const textSpan = bannerPlaceholder?.querySelector('span');
+    if(textSpan) textSpan.textContent = hasImage ? 'Banner stored' : 'No banner generated yet';
+  };
+
+  const refreshBannerDisplay = (payload = {}) => {
+    const hasImage = Boolean(payload.imagePath);
+    if(bannerImage){
+      if(hasImage){
+        bannerImage.src = `${payload.imagePath}?t=${Date.now()}`;
+        bannerImage.classList.remove('hidden');
+      } else {
+        bannerImage.classList.add('hidden');
+      }
+    }
+    if(bannerPlaceholder){
+      bannerPlaceholder.classList.toggle('hidden', hasImage);
+      updatePlaceholderText(hasImage);
+    }
+    if(bannerSourceLink){
+      if(payload.imageUrl){
+        bannerSourceLink.href = payload.imageUrl;
+        bannerSourceLink.classList.remove('hidden');
+      } else {
+        bannerSourceLink.classList.add('hidden');
+      }
+    }
+    setBannerLabel(hasImage);
+  };
+
+  const showPreviewModal = (imageData) => {
+    pendingBanner = imageData;
+    if(previewImage && imageData.imagePath){
+      previewImage.src = `${imageData.imagePath}?t=${Date.now()}`;
+    }
+    if(previewModal){
+      const modal = new bootstrap.Modal(previewModal);
+      modal.show();
+      
+      // Clean up temp file if modal is closed without accepting
+      previewModal.addEventListener('hidden.bs.modal', () => {
+        if(pendingBanner?.imagePath){
+          // Temp file will be cleaned up on next generation or server cleanup
+          pendingBanner = null;
+        }
+      }, { once: true });
+    }
+  };
+
+  const acceptBanner = async () => {
+    if(pendingBanner){
+      try {
+        // Call accept endpoint to finalize the banner
+        const res = await fetch(`/organizers/${organizerId}/events/${eventId}/accept-banner`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ 
+            previewPath: pendingBanner.imagePath,
+            imageUrl: pendingBanner.imageUrl 
+          }),
+        });
+        
+        const json = await res.json().catch(() => ({}));
+        
+        if(res.ok){
+          refreshBannerDisplay(json);
+          showToast('Banner saved','success');
+          pendingBanner = null;
+          const modal = bootstrap.Modal.getInstance(previewModal);
+          if(modal) modal.hide();
+        } else {
+          showToast(json.error || 'Failed to save banner', 'error');
+        }
+      } catch(err) {
+        console.error('Accept banner error:', err);
+        showToast('Failed to save banner', 'error');
+      }
+    }
+  };
+
+  // Use event delegation on document for modal button clicks
+  document.addEventListener('click', async (e) => {
+    // Check if clicking a button with data-action directly
+    const target = e.target.closest('[data-action]');
+    
+    if(!target) return;
+    
+    const action = target.getAttribute('data-action');
+    
+    // Only handle banner modal actions
+    if(action === 'accept-banner'){
+      await acceptBanner();
+    } else if(action === 'regenerate-banner'){
+      pendingBanner = null;
+      const modal = bootstrap.Modal.getInstance(previewModal);
+      if(modal) modal.hide();
+      // Trigger generation again
+      setTimeout(() => aiBannerButton?.click(), 300);
+    }
+  });
+
+  if(aiBannerButton && organizerId && eventId){
+    aiBannerButton.addEventListener('click', async () => {
+      const prompt = window.prompt('Describe the banner you want to generate (vivid, concise prompts work best)');
+      if(!prompt) return showToast('Prompt is required','info');
+      const originalHtml = aiBannerButton.innerHTML;
+      aiBannerButton.disabled = true;
+      aiBannerButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+      try{
+        const res = await fetch(`/organizers/${organizerId}/events/${eventId}/generate-image`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ prompt }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if(res.ok){
+          // Show preview modal instead of immediately updating
+          showPreviewModal(json);
+        } else {
+          showToast(json.error || 'Failed to generate banner','error');
+        }
+      }catch(err){
+        console.error(err);
+        showToast('Network error','error');
+      }finally{
+        aiBannerButton.disabled = false;
+        aiBannerButton.innerHTML = originalHtml;
+        const hasImageNow = bannerImage && !bannerImage.classList.contains('hidden');
+        setBannerLabel(Boolean(hasImageNow));
+      }
+    });
+  }
 });

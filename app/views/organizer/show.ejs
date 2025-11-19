@@ -71,12 +71,40 @@
       <!-- Status Card -->
       <div class="row-card" style="display:grid;gap:10px;">
         <div class="o-sub" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Status</div>
-        <div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <span class="status-chip <%= event.published ? 'live':'' %>">
             <i class="fa-solid <%= event.published ? 'fa-signal':'fa-pen-to-square' %>"></i>
             <span class="status-label"><%= event.published ? 'Published':'Draft' %></span>
           </span>
+          <% if (event.moderationStatus) { %>
+            <% if (event.moderationStatus === 'pending') { %>
+              <span class="status-chip status-chip--pending">
+                <i class="fa-solid fa-hourglass-half"></i>
+                <span class="status-label">Pending Approval</span>
+              </span>
+            <% } else if (event.moderationStatus === 'approved') { %>
+              <span class="status-chip status-chip--approved">
+                <i class="fa-solid fa-check-circle"></i>
+                <span class="status-label">Approved</span>
+              </span>
+            <% } else if (event.moderationStatus === 'rejected') { %>
+              <span class="status-chip status-chip--rejected">
+                <i class="fa-solid fa-times-circle"></i>
+                <span class="status-label">Rejected</span>
+              </span>
+            <% } %>
+          <% } %>
         </div>
+        <% if (event.moderationStatus === 'rejected' && event.moderationReason) { %>
+          <div class="alert alert-danger" style="margin-top: 8px; padding: 12px;">
+            <strong><i class="fa-solid fa-triangle-exclamation"></i> Rejection reason:</strong><br />
+            <%= event.moderationReason %>
+          </div>
+        <% } else if (event.moderationStatus === 'pending') { %>
+          <div class="helper" style="color: var(--warning); margin-top: 4px;">
+            <i class="fa-solid fa-info-circle"></i> This event is awaiting admin approval before it will be visible to students.
+          </div>
+        <% } %>
         <div class="helper">Created <%= formatDate(event.createdAt) %></div>
         <!-- Publish toggle switch -->
         <div class="event-controls" style="margin-top:4px;">
@@ -122,6 +150,34 @@
           <a href="/organizers/<%= organizerId %>/events" class="btn ghost"><i class="fa-solid fa-arrow-left"></i> Back</a>
           <button class="btn danger" id="deleteEvent" data-event-id="<%= event.id %>" type="button"><i class="fa-solid fa-trash"></i> Delete</button>
         </div>
+      </div>
+    </section>
+
+    <section class="row-card event-banner-card" style="display:grid;gap:14px;margin-bottom:34px;">
+      <div class="o-title" style="font-size:20px;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-images"></i> AI banner</div>
+      <div class="event-banner-shell">
+        <div class="event-banner-visual" role="presentation">
+          <img class="event-banner-image <%= event.generatedBannerPath ? '' : 'hidden' %>" data-ai-banner src="<%= event.generatedBannerPath || '' %>" alt="Banner for <%= escapeAttr(event.title) %>" loading="lazy">
+          <div class="event-banner-placeholder <%= event.generatedBannerPath ? 'hidden' : '' %>" data-ai-placeholder>
+            <div>
+              <i class="fa-solid fa-cloud" aria-hidden="true"></i>
+              <strong><%= event.generatedBannerPath ? 'Banner stored' : 'No banner yet' %></strong>
+              <p class="helper" style="margin-top:4px;">Generate an AI banner and it will appear here</p>
+            </div>
+          </div>
+        </div>
+        <div class="event-banner-controls">
+          <button class="btn ghost" type="button" data-action="generate-image" data-event-id="<%= event.id %>">
+            <i class="fa-solid fa-magic-sparkles"></i>
+            <span><%= event.generatedBannerPath ? 'Regenerate banner' : 'Generate banner' %></span>
+          </button>
+          <a class="btn ghost <%= event.generatedBannerUrl ? '' : 'hidden' %>" data-ai-source target="_blank" rel="noopener" href="<%= event.generatedBannerUrl || '#' %>">
+            <i class="fa-solid fa-up-right-from-square"></i> View source
+          </a>
+        </div>
+      </div>
+      <div class="helper" style="color:var(--muted);">
+        <i class="fa-solid fa-info-circle"></i> Generated banners are stored
       </div>
     </section>
 
@@ -218,6 +274,35 @@
     </section>
   <% } %>
 </main>
+
+<!-- Banner Preview Modal -->
+<div class="modal fade" id="bannerPreviewModal" tabindex="-1" aria-labelledby="bannerPreviewModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content bg-dark border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title" id="bannerPreviewModalLabel"><i class="fa-solid fa-eye me-2"></i>Banner Preview</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3 text-center" style="border-radius: var(--radius); overflow: hidden; border: 1px solid var(--mix-border);">
+          <img id="previewBannerImage" src="" alt="Generated banner preview" class="img-fluid" style="width: 100%; height: auto; display: block;" />
+        </div>
+        <div class="alert alert-info small">
+          <i class="fa-solid fa-lightbulb me-2"></i>This is your AI-generated banner. You can accept it or regenerate with a new prompt.
+        </div>
+      </div>
+      <div class="modal-footer border-secondary" style="gap: 8px; flex-wrap: wrap;">
+        <button type="button" class="btn btn-outline-light" data-action="regenerate-banner">
+          <i class="fa-solid fa-rotate me-1"></i>Regenerate
+        </button>
+        <button type="button" class="btn btn-primary" data-action="accept-banner">
+          <i class="fa-solid fa-check me-1"></i>Accept & Use
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <%- include('../partials/footer') %>
 <script type="module" src="/js/event-details.js"></script>
