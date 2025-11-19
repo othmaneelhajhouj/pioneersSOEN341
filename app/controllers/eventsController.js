@@ -11,6 +11,7 @@ const { writeFile, mkdir, unlink, rename } = require("fs/promises");
 const { existsSync } = require("fs");
 const path = require("path");
 const Replicate = require("replicate");
+
 const replicate = new Replicate();
 
 /**
@@ -861,6 +862,17 @@ const event_accept_banner = async (req, res) => {
       return res.status(400).json({ error: 'Preview path is required' });
     }
 
+    // Authorization check: Only the organizer can accept/finalize the banner
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { organizerId: true }
+    });
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    if (!req.user || event.organizerId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden: Only the event organizer can accept the banner' });
+    }
     // Move from temp preview to final location
     const tempFileName = `event-${eventId}-preview.png`;
     const finalFileName = `event-${eventId}.png`;
