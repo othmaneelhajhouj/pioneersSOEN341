@@ -58,10 +58,7 @@ html {
 
 /*Base element defaults*/
 body {
-  background:
-    radial-gradient(1200px 600px at 10% -10%, color-mix(in oklab, var(--gold) 10%, transparent), transparent),
-    radial-gradient(1200px 600px at 90% -20%, color-mix(in oklab, var(--vio) 10%, transparent), transparent),
-    var(--bg);
+  background: var(--bg);
   font-family: Inter, system-ui, -apple-system, Segoe UI, Arial, sans-serif;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
@@ -398,6 +395,84 @@ table td, table th {
   align-items: center;
   gap: 6px;
 }
+
+.event-banner {
+  width: 100%;
+  border-radius: var(--radius);
+  border: 1px solid var(--mix-border);
+  overflow: hidden;
+  min-height: 200px;
+  background: radial-gradient(circle at 30% 20%, color-mix(in oklab, var(--gold) 40%, transparent), transparent 60%);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.event-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.event-banner-card {
+  /* Inherits background from .row-card */
+}
+
+.event-banner-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.event-banner-visual {
+  width: 100%;
+  border-radius: var(--radius);
+  border: 1px solid var(--mix-border);
+  overflow: hidden;
+  min-height: 200px;
+  background: radial-gradient(circle at 30% 20%, color-mix(in oklab, var(--gold) 40%, transparent), transparent 60%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.event-banner-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+.event-banner-placeholder {
+  width: 100%;
+  min-height: 200px;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.event-banner-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Fix Bootstrap modal z-index */
+.modal-backdrop {
+  z-index: 1040 !important;
+}
+.modal {
+  z-index: 1050 !important;
+}
+.modal-dialog {
+  z-index: 1060 !important;
+}
+
 .grid-meta {
   display: grid;
   grid-template-columns: minmax(220px,2fr) minmax(180px,1fr) minmax(180px,1fr) auto;

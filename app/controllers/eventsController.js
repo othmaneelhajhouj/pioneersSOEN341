@@ -7,27 +7,11 @@
 const prisma = require('../lib/prisma');
 const { validateEventData, wantsJson } = require('../utils/validation');
 const { MESSAGES, DEFAULTS } = require('../utils/constants');
-
-/**
- * OLD GET /events - List all published events (student view)
- 
-const event_index_student = async (req, res) => {
-  try {
-    const events = await prisma.event.findMany({
-      where: { published: true },
-      orderBy: { startsAt: "asc" },
-      include: {
-        organizer: { select: { id: true, firstName: true, lastName: true } },
-        _count: { select: { tickets: true } }
-      }
-    });
-    return res.render('student/index', { events });
-  } catch (error) {
-    console.error('Error fetching events:', error);
-    res.status(500).json({ error: 'Failed to fetch events' });
-  }
-};
-*/
+const { writeFile, mkdir, unlink, rename } = require("fs/promises");
+const { existsSync } = require("fs");
+const path = require("path");
+const Replicate = require("replicate");
+const replicate = new Replicate();
 
 /**
  * Get /events - List & filter all published events (student view) w/ pagination logic
@@ -812,6 +796,108 @@ const event_unpublish = async (req, res) => {
   }
 };
 
+const event_generate_image = async (req, res) => {
+  try {
+    const rawPrompt = req.body?.prompt;
+    const prompt = typeof rawPrompt === 'string' ? rawPrompt.trim() : '';
+    const eventId = req.params?.eventId;
+
+    if (!eventId) {
+      return res.status(400).json({ error: 'Event ID is required' });
+    }
+
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    // Auto-generate prompt from event data if needed
+    const event = await prisma.event.findUnique({ 
+      where: { id: eventId },
+      select: { title: true, description: true, location: true, type: true }
+    });
+
+    const finalPrompt = prompt || 
+      `Event banner for "${event.title}". ${event.description}. Location: ${event.location}. ${event.type} event.`;
+
+    const input = {
+      prompt: finalPrompt.slice(0, 1000),
+      aspect_ratio: '16:9',
+      output_format: 'png',
+      safety_filter_level: 'block_medium_and_above',
+    };
+
+    const output = await replicate.run('google/imagen-4', { input });
+    const imageUrl = typeof output?.url === 'function' ? output.url() : undefined;
+    
+    // Save to TEMP location (preview only, not final)
+    const tempFileName = `event-${eventId}-preview.png`;
+    const tempRelativePath = `/event-images/${tempFileName}`;
+    const tempOutputPath = path.join(__dirname, '..', 'public', 'event-images', tempFileName);
+
+    await writeFile(tempOutputPath, output);
+    
+    // Return temp path for preview (DB not updated yet)
+    res.json({ 
+      imagePath: tempRelativePath, 
+      imageUrl,
+      isPreview: true 
+    });
+  } catch (error) {
+    console.error('Error generating image:', error);
+    res.status(500).json({ error: 'Failed to generate image' });
+  }
+};
+
+const event_accept_banner = async (req, res) => {
+  try {
+    const eventId = req.params?.eventId;
+    const { previewPath } = req.body;
+
+    if (!eventId) {
+      return res.status(400).json({ error: 'Event ID is required' });
+    }
+
+    if (!previewPath) {
+      return res.status(400).json({ error: 'Preview path is required' });
+    }
+
+    // Move from temp preview to final location
+    const tempFileName = `event-${eventId}-preview.png`;
+    const finalFileName = `event-${eventId}.png`;
+    const tempPath = path.join(__dirname, '..', 'public', 'event-images', tempFileName);
+    const finalPath = path.join(__dirname, '..', 'public', 'event-images', finalFileName);
+    
+    // Delete old banner if exists
+    if (existsSync(finalPath)) {
+      await unlink(finalPath);
+    }
+
+    // Move temp to final
+    await rename(tempPath, finalPath);
+
+    const finalRelativePath = `/event-images/${finalFileName}`;
+    const imageUrl = req.body.imageUrl;
+
+    // Now update database with final path
+    await prisma.event.update({
+      where: { id: eventId },
+      data: {
+        generatedBannerPath: finalRelativePath,
+        generatedBannerUrl: imageUrl,
+      },
+    });
+
+    res.json({ 
+      success: true,
+      imagePath: finalRelativePath, 
+      imageUrl 
+    });
+  } catch (error) {
+    console.error('Error accepting banner:', error);
+    res.status(500).json({ error: 'Failed to accept banner' });
+  }
+};
+
 // Export all controller functions
 module.exports = {
   event_index_student,
@@ -824,5 +910,7 @@ module.exports = {
   event_delete,
   event_publish,
   event_unpublish,
-  event_ics
+  event_ics,
+  event_generate_image,
+  event_accept_banner
 };
