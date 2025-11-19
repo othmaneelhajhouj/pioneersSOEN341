@@ -74,6 +74,7 @@ async function main() {
     organizerId: organizer1.id,
     published: true,
     category: "Campus life",
+    moderationStatus: "approved",
   });
   await addEvent({
     title: "Career Development Workshop",
@@ -86,7 +87,8 @@ async function main() {
     capacity: 100,
     organizerId: organizer1.id,
     published: true,
-    category: "Career development"
+    category: "Career development",
+    moderationStatus: "approved",
   });
 
   // Organizer 2
@@ -101,7 +103,8 @@ async function main() {
     capacity: 50,
     organizerId: organizer2.id,
     published: true,
-    category: "Career development"
+    category: "Career development",
+    moderationStatus: "approved",
   });
   await addEvent({
     title: "Tech Networking Night",
@@ -129,7 +132,8 @@ async function main() {
     capacity: 300,
     organizerId: organizer3.id,
     published: true,
-    category: "Campus life"
+    category: "Campus life",
+    moderationStatus: "approved",
   });
   await addEvent({
     title: "Startup Pitch Night",
@@ -155,7 +159,8 @@ async function main() {
     capacity: 80,
     organizerId: organizer3.id,
     published: true,
-    category: "Campus life"
+    category: "Campus life",
+    moderationStatus: "approved",
   });
 
   console.log("Creating tickets...");
