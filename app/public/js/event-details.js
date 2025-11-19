@@ -177,9 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const previewModal = document.getElementById('bannerPreviewModal');
   const previewImage = document.getElementById('previewBannerImage');
   
-  console.log('Modal element found:', !!previewModal); // Debug
-  console.log('Accept button exists:', !!document.querySelector('[data-action="accept-banner"]')); // Debug
-  console.log('Regenerate button exists:', !!document.querySelector('[data-action="regenerate-banner"]')); // Debug
   
   let pendingBanner = null; // Store generated banner data before accepting
 
