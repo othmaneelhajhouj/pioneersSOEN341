@@ -147,19 +147,11 @@ app.use('/admin', adminOrganizations);
 // mount admin view routes for dashboard pages
 app.use('/admin', adminViews);
 
-//mount compiled adminViews router
-app.use('/admin', adminViews);
-
 //mount compiled tickets router
 app.use('/', tickets);
 
 //mount compiled organizerScan router
 app.use('/', organizerScan);
-
-//adminViews router
-const { adminViews } = require('./dist/routes/adminViews');
-app.use('/admin', adminViews);
-
 
 //endpoint to check server health
 app.get('/health', (_req, res) => res.json({ok: true}));
