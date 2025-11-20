@@ -1,18 +1,11 @@
 const express = require("express");
 const prisma = require("../lib/prisma");
-const { wantsJson } = require("../utils/validation");
-
+const {wantsJson} = require("../utils/validation");
+const requireLogin = require('../middlewares/requireLogin');
 const router = express.Router();
 
-// Simple guard: students need to be logged in to view their tickets.
-function requireAuth(req, res, next) {
-  if (req.user) return next();
-  if (wantsJson(req)) return res.status(401).json({ error: "Authentication required." });
-  const nextUrl = encodeURIComponent(req.originalUrl || "/my-events");
-  return res.redirect(`/login?next=${nextUrl}`);
-}
 
-router.get("/my-events", requireAuth, async (req, res) => {
+router.get("/my-events", requireLogin, async (req, res) => {
   try {
     const tickets = await prisma.ticket.findMany({
       where: { userId: req.user.id },

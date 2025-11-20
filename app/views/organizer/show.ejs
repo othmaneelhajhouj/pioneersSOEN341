@@ -5,8 +5,30 @@
   <title><%= event ? event.title : 'Event Details' %></title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <%- include('../partials/styles') %>
-  <% const crumbs = [{label:'Organizer', href:`/organizers/${organizerId}/events`},{ label: event ? event.title : 'Event'}];
-  const escapeAttr = (value = '') => String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    defer
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <% 
+    const crumbs = [
+      {label: 'Organizer', href: `/organizers/${organizerId}/events`},
+      {label: event ? event.title : 'Event'},
+    ];
+    const escapeAttr = (value = '') =>
+      String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
   %>
 </head>
 <body data-organizer-id="<%= organizerId %>" data-event-id="<%= event ? event.id : '' %>" data-flash="<%= (flash ? String(flash).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '') %>">
@@ -177,7 +199,26 @@
       <div class="event-meta" style="margin-top:4px;">
         <span><i class="fa-regular fa-clock"></i> <%= formatDateTime(event.startsAt) %></span>
         <span><i class="fa-solid fa-hourglass-half"></i> Ends <%= formatDateTime(event.endsAt) %></span>
-        <span><i class="fa-solid fa-location-dot"></i> <%= event.location %></span>
+        <span><i class="fa-solid fa-location-dot"></i> <%= map.address || event.location %></span>
+        <% if (map.hasMap) { %>
+          <div
+            id="organizerEventMap"
+            class="event-map mt-3"
+            data-lat="<%= map.lat %>"
+            data-lng="<%= map.lng %>"
+            data-address="<%= map.address %>">
+          </div>
+          <a href="<%= map.directionsUrl %>"
+            target="_blank"
+            rel="noopener"
+            class="btn btn-outline-light btn-sm mt-2">
+            Get Directions
+          </a>
+        <% } else { %>
+          <p class="helper mt-2">
+            Map unavailable (<%= map.status %><%= map.message ? ': ' + map.message : '' %>).
+          </p>
+        <% } %>
         <span><i class="fa-solid fa-people-group"></i> Capacity <%= capacity %></span>
         <span><i class="fa-solid fa-circle-check"></i> Checked in <%= checkedIn %></span>
       </div>
@@ -277,5 +318,6 @@
 <div class="toast" id="toast"></div>
 <%- include('../partials/footer') %>
 <script type="module" src="/js/event-details.js"></script>
+<script type="module" src="/js/event-map.js"></script>
 </body>
 </html>

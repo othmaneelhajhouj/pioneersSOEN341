@@ -34,6 +34,7 @@ jobs:
           mkdir -p .tmp
           export DATABASE_URL="file:.tmp/test-ci.db"
           npx prisma migrate deploy --schema=prisma/schema.prisma
+          npm run seed
         env:
           DATABASE_URL: file:.tmp/test-ci.db
 
