@@ -2,12 +2,18 @@ const INIT_DELAY_MS = 50;
 let mapInitialized = false;
 
 const initEventMaps = () => {
+
   if (mapInitialized) return;
   if (typeof window.L !== 'object') {
+    retryCount += 1;
+    if (retryCount > MAX_RETRIES) {
+      console.warn('Leaflet failed to load — giving up on map init.');
+      return;
+    }
     window.setTimeout(initEventMaps, INIT_DELAY_MS);
     return;
   }
-
+  
   mapInitialized = true;
   const L = window.L;
 
