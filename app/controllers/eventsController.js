@@ -812,17 +812,35 @@ const event_create = async (req, res) => {
  */
 const event_purchase_ticket = async (req, res) => {
   try {
+
     const eventId = req.params.id;
     const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ error: 'Login required' });
+
+    if (!userId) return res.status(401).json({error: 'Login required'});
+
+    const payment = req.body?.payment || {};
+
+    if (!payment || typeof payment.cardNumber !== 'string' || !payment.cardNumber.trim() || typeof payment.name !== 'string' || !payment.name.trim()) 
+    {
+      return res.status(400).json({ error: 'Payment details required' });
+    }
 
     const event = await prisma.event.findFirst({
-      where: { id: eventId, published: true, type: 'paid' },
+      where: {id: eventId, published: true, type: 'paid'},
     });
     if (!event) return res.status(404).json({ error: 'Paid event not found' });
 
-    const existing = await prisma.ticket.findFirst({ where: { eventId, userId, paymentStatus: 'succeeded' } });
-    if (existing) return res.status(400).json({ error: 'Ticket already purchased' });
+    const prior = await prisma.ticket.findFirst({
+      where: {eventId, userId},
+      orderBy: {createdAt: 'desc'},
+    });
+
+    if (prior?.paymentStatus === 'succeeded') {
+      return res.status(400).json({error: 'Ticket already purchased'});
+    }
+    if (prior && prior.paymentStatus === 'pending') {
+      return res.status(409).json({error: 'Payment already in progress', ticketId: prior.id});
+    }
 
     const ticket = await prisma.ticket.create({
       data: {
@@ -835,22 +853,23 @@ const event_purchase_ticket = async (req, res) => {
     });
 
     try {
-      const result = await processMockPayment(req.body.payment);
+      const result = await processMockPayment({cardNumber: payment.cardNumber, name: payment.name, amount: event.price,});
       await prisma.ticket.update({
-        where: { id: ticket.id },
-        data: { paymentStatus: 'succeeded', paymentRef: result.id },
+        where: {id: ticket.id},
+        data: {paymentStatus: 'succeeded', paymentRef: result.id},
       });
       return res.json({ ok: true, ticketId: ticket.id });
+
     } catch (err) {
       await prisma.ticket.update({
-        where: { id: ticket.id },
-        data: { paymentStatus: 'failed', paymentNotes: err.message },
+        where: {id: ticket.id},
+        data: {paymentStatus: 'failed', paymentNotes: err.message},
       });
-      return res.status(402).json({ error: err.message });
+      return res.status(402).json({error: err.message});
     }
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Payment failed' });
+    return res.status(500).json({error: 'Payment failed'});
   }
 };
 
