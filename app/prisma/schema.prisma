@@ -106,9 +106,12 @@ model Ticket {
   status    TicketStatus @default(claimed)
   claimedAt DateTime     @default(now())
   usedAt    DateTime?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  paidAmount Int?
+  paymentStatus String @default("pending")
+  paymentRef String? @unique
+  paymentNotes String?
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
