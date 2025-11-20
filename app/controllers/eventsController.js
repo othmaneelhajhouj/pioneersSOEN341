@@ -14,6 +14,7 @@ const Replicate = require("replicate");
 const {geocodeAddress} = require('../lib/geocoding');
 
 const replicate = new Replicate();
+const {processMockPayment} = require('../lib/mockPayments');
 
 /*
  * Helper - Combines validated event data with geocode info 
@@ -807,6 +808,53 @@ const event_create = async (req, res) => {
 };
 
 /**
+ * POST /events/:id/payments - Simulates the checkout flow for paid events
+ */
+const event_purchase_ticket = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Login required' });
+
+    const event = await prisma.event.findFirst({
+      where: { id: eventId, published: true, type: 'paid' },
+    });
+    if (!event) return res.status(404).json({ error: 'Paid event not found' });
+
+    const existing = await prisma.ticket.findFirst({ where: { eventId, userId, paymentStatus: 'succeeded' } });
+    if (existing) return res.status(400).json({ error: 'Ticket already purchased' });
+
+    const ticket = await prisma.ticket.create({
+      data: {
+        eventId,
+        userId,
+        paymentStatus: 'pending',
+        paidAmount: event.price,
+        qrToken: `mock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      },
+    });
+
+    try {
+      const result = await processMockPayment(req.body.payment);
+      await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: { paymentStatus: 'succeeded', paymentRef: result.id },
+      });
+      return res.json({ ok: true, ticketId: ticket.id });
+    } catch (err) {
+      await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: { paymentStatus: 'failed', paymentNotes: err.message },
+      });
+      return res.status(402).json({ error: err.message });
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Payment failed' });
+  }
+};
+
+/**
  * PATCH /organizers/:organizerId/events/:eventId - Update an event and refresh geocode data when the location changes
  */
 
@@ -1076,6 +1124,7 @@ module.exports = {
   event_index_organizer,
   event_new_form,
   event_details_student,
+  event_purchase_ticket,
   event_details_organizer,
   event_export_attendees,
   event_create,
