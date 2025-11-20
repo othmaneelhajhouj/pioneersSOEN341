@@ -12,9 +12,7 @@ const morgan = require('morgan');
 const { PrismaClient, OrganizerStatus } = require("./generated/prisma");
 const crypto = require("crypto");
 const QRCode = require('qrcode');
-const {
-  findSession,
-} = require("./lib/auth");
+const {findSession,} = require("./lib/auth");
 
 //ATTENTION: these requires will only work after you run "npm run build" once to create the /dist/ folder containing compiled JS files
 const {adminOrganizers} = require("./dist/routes/adminOrganizers");
@@ -23,6 +21,7 @@ const {adminAnalytics} = require('./dist/routes/adminAnalytics');
 const {adminAnalyticsTrends} = require('./dist/routes/adminAnalyticsTrends');
 const {adminRoleManagement} = require('./dist/routes/adminRoleManagement');
 const {adminOrganizations} = require('./dist/routes/adminOrganizations');
+const {adminViews} = require('./dist/routes/adminViews');
 const {tickets} = require('./dist/routes/tickets');
 const {organizerScan} = require('./dist/routes/organizerScan');
 
@@ -144,6 +143,12 @@ app.use('/admin', adminRoleManagement);
 
 //mount compiled adminOrganizations router
 app.use('/admin', adminOrganizations);
+
+// mount admin view routes for dashboard pages
+app.use('/admin', adminViews);
+
+//mount compiled adminViews router
+app.use('/admin', adminViews);
 
 //mount compiled tickets router
 app.use('/', tickets);
