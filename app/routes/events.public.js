@@ -1,5 +1,6 @@
 const express = require('express');
 const eventsController = require('../controllers/eventsController');
+const requireLogin = require('../middlewares/requireLogin')
 
 const router = express.Router();
 
@@ -17,5 +18,9 @@ router.get('/:id', eventsController.event_details_student);
 // GET /events/:id/ics
 // Download ICS for a published event
 router.get('/:id/ics', eventsController.event_ics);
+
+// POST /events/:id/payments
+// Simulate checkout and confirm ticket purchase for paid events
+router.post('/:id/payments', requireLogin, eventsController.event_purchase_ticket);
 
 module.exports = router;
