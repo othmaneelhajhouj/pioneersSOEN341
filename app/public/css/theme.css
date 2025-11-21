@@ -923,3 +923,17 @@ textarea.field:focus {
   outline-offset: 2px;
 }
 
+/* Event map widget */
+.event-map {
+  min-height: 240px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0f1115;
+}
+.event-map .leaflet-container {
+  min-height: 240px;
+}
+@media (max-width: 576px) {
+  .event-map { min-height: 200px; }
+}
+

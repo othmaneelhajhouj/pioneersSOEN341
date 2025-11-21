@@ -30,6 +30,9 @@ router.get('/:organizerId/events/:eventId', eventsController.event_details_organ
 // Create a new event
 router.post('/:organizerId/events', eventsController.event_create);
 
+// Update an existing event
+router.patch('/:organizerId/events/:eventId', eventsController.event_update);
+
 // Publish an event
 router.patch('/:organizerId/events/:eventId/publish', eventsController.event_publish);
 

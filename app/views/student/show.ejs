@@ -5,6 +5,18 @@
   <title><%= loadError ? 'Event Not Found' : event.title %> | Campus Events</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <% const crumbs = loadError ? [] : [{label:'Events', href:'/events'}, {label: event.title}]; %>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    defer
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
   <%- include('../partials/nav', { active: 'events', injectStyles: true, crumbs }) %>
 </head>
 <body>
@@ -64,8 +76,30 @@
             <% } %>
           </dd>
 
+
           <dt class="col-sm-4 text-secondary">Where</dt>
-          <dd class="col-sm-8 mb-0"><%= event.location %></dd>
+          <dd class="col-sm-8 mb-0">
+            <div><%= map.address || event.location %></div>
+            <% if (map.hasMap) { %>
+              <div
+                id="studentEventMap"
+                class="event-map my-3"
+                data-lat="<%= map.lat %>"
+                data-lng="<%= map.lng %>"
+                data-address="<%= map.address %>">
+              </div>
+              <a href="<%= map.directionsUrl %>"
+                 target="_blank"
+                 rel="noopener"
+                 class="btn btn-outline-light btn-sm">
+                Get Directions
+              </a>
+            <% } else { %>
+              <p class="text-secondary small mt-2">
+                Map unavailable (<%= map.status %><%= map.message ? ': ' + map.message : '' %>).
+              </p>
+            <% } %>
+          </dd>
 
           <dt class="col-sm-4 text-secondary">Capacity</dt>
           <dd class="col-sm-8 mb-0">
@@ -127,8 +161,48 @@
                 <p class="small text-secondary mb-0">All tickets have been claimed.</p>
               </div>
             </div>
-          <% } else if (canClaim) { %>
-            <form method="post" action="/events/<%= event.id %>/tickets/claim" class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+          <% } else if (event.type === 'paid' && canClaim) { %>
+            <form id="mockPaymentForm"
+                  class="w-100 d-flex flex-column gap-3"
+                  data-submit-url="/events/<%= event.id %>/payments"
+                  data-event-id="<%= event.id %>"
+                  data-amount="<%= event.price %>">
+              <div class="row g-3">
+                <div class="col-12 col-md-6">
+                  <label class="form-label small text-secondary">Name on card</label>
+                  <input type="text"
+                        class="form-control form-control-sm bg-dark text-light"
+                        name="name"
+                        placeholder="Jane Student"
+                        required />
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label small text-secondary">Card number</label>
+                  <input type="text"
+                        class="form-control form-control-sm bg-dark text-light"
+                        name="cardNumber"
+                        inputmode="numeric"
+                        autocomplete="cc-number"
+                        placeholder="4242 4242 4242 4242"
+                        required />
+                  <div class="form-text text-secondary small mt-1">
+                    Success: 4242 4242 4242 4242 · Fail: 4000 0000 0000 9995 / 9987
+                  </div>
+                </div>
+              </div>
+              <div id="mockPaymentAlert" class="alert d-none mb-0"></div>
+              <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm px-4">
+                  <span class="submit-label">Pay $<%= (event.price / 100).toFixed(2) %></span>
+                  <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                </button>
+                <a href="/events" class="btn btn-outline-light btn-sm">Cancel</a>
+              </div>
+            </form>
+          <% } else if (event.type === 'free' && canClaim) { %>
+            <form method="post"
+                  action="/events/<%= event.id %>/tickets/claim"
+                  class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
               <div>
                 <h3 class="h6 mb-1">Ready to join?</h3>
                 <p class="small text-secondary mb-0">Claim a ticket to add this to your events.</p>
@@ -149,6 +223,7 @@
   <% } %>
 </main>
 <%- include('../partials/footer') %>
+
 <script>
   // Show success toast if ticket was just claimed
   const urlParams = new URLSearchParams(window.location.search);
@@ -163,5 +238,67 @@
     window.history.replaceState({}, '', window.location.pathname);
   }
 </script>
+
+<script type="module">
+  // this is a mock payment form handler that posts card details to /events/:id/payments,
+  // shows success/failure states, and refreshes with ?claimed=1 when approved
+  const form = document.getElementById('mockPaymentForm');
+  if (form) {
+    const alertBox = document.getElementById('mockPaymentAlert');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const label = submitBtn.querySelector('.submit-label');
+    const spinner = submitBtn.querySelector('.spinner-border');
+    const resetButtonState = () => {
+      submitBtn.disabled = false;
+      spinner.classList.add('d-none');
+      label.textContent = `Pay $${(Number(form.dataset.amount) / 100).toFixed(2)}`;
+    };
+    const showAlert = (message, type) => {
+      alertBox.className = `alert alert-${type} mb-0`;
+      alertBox.textContent = message;
+      alertBox.classList.remove('d-none');
+    };
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      alertBox.classList.add('d-none');
+      submitBtn.disabled = true;
+      spinner.classList.remove('d-none');
+      label.textContent = 'Processing...';
+      const formData = new FormData(form);
+      const payload = {
+        payment: {
+          name: formData.get('name'),
+          cardNumber: String(formData.get('cardNumber') || ''),
+          amount: Number(form.dataset.amount),
+        },
+      };
+
+      try {
+        const response = await fetch(form.dataset.submitUrl, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const {error} = await response.json().catch(() => ({error: 'Payment failed'}));
+          throw new Error(error || 'Payment failed');
+        }
+
+        const data = await response.json();
+        showAlert(`Payment succeeded! Ticket ${data.ticketId} confirmed.`, 'success');
+        setTimeout(() => {
+          window.location.assign(`${window.location.pathname}?claimed=1`);
+        }, 800);
+      } catch (err) {
+        showAlert(err.message || 'Unable to complete payment.', 'danger');
+        resetButtonState();
+      }
+    });
+  }
+</script>
+
+<script type="module" src="/js/event-map.js"></script>
 </body>
 </html>

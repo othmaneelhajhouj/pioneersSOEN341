@@ -32,3 +32,8 @@ adminViews.get("/organizations-manage", adminOnly, (req: Request, res: Response)
 adminViews.get("/users-manage", adminOnly, (req: Request, res: Response) => {
     res.render("admin/roleManagement");
 });
+
+// Redirects the bare /admin path to the main dashboard view so admins don't see a 404
+adminViews.get("/", adminOnly, (_req, res) => {
+  return res.redirect("/admin/dashboard");
+});
