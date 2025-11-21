@@ -992,11 +992,7 @@ const event_generate_image = async (req, res) => {
       return res.status(400).json({ error: 'Event ID is required' });
     }
 
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
-    }
-
-    // Auto-generate prompt from event data if needed
+    // Fetch event data for auto-generation or validation
     const event = await prisma.event.findUnique({ 
       where: { id: eventId },
       select: { title: true, description: true, location: true, type: true, organizerId: true }
