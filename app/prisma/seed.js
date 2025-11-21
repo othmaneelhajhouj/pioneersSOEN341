@@ -68,7 +68,7 @@ async function main() {
 
   console.log("Creating users/organization...");
   const [organizer1, organizer2, organizer3] = await Promise.all([
-    prisma.user.create({ data: { email: "org1@example.com", firstName: "Alex",   lastName: "Smith",  role: "organizer", organizerStatus: "pending", passwordHash: hashPassword("  ") } }),
+    prisma.user.create({ data: { email: "org1@example.com", firstName: "Alex",   lastName: "Smith",  role: "organizer", organizerStatus: "pending", passwordHash: hashPassword("Organizer123!") } }),
     prisma.user.create({ data: { email: "org2@example.com", firstName: "Morgan", lastName: "Chen",   role: "organizer", organizerStatus: "pending", passwordHash: hashPassword("Organizer123!") } }),
     prisma.user.create({ data: { email: "org3@example.com", firstName: "Jamie",  lastName: "Lopez",  role: "organizer", organizerStatus: "approved", passwordHash: hashPassword("Organizer123!") } }),
   ]);
@@ -127,8 +127,8 @@ async function main() {
   await addEvent({
     title: "Welcome Back Fair",
     description: "Campus clubs, music, and food trucks.",
-    startsAt: daysFromNow(7),
-    endsAt: hoursAfter(daysFromNow(7), 2),
+    startsAt: daysAgo(7),
+    endsAt: hoursAfter(daysAgo(7), 2),
     location: "1455 De Maisonneuve Blvd W, Montreal, QC H3G 1M8", // Hall Building
     type: "free",
     price: 0,
@@ -287,24 +287,22 @@ async function main() {
   // Create tickets with varied creation times and check-ins for analytics
   await prisma.ticket.createMany({
     data: [
-      // Welcome Back Fair - tickets sold over time, some checked in
-      { eventId: id["Welcome Back Fair"], userId: student1.id, qrToken: "QR-CASEY-WELCOME", createdAt: daysAgo(40), claimedAt: daysAgo(40), usedAt: daysAgo(5) },
-      { eventId: id["Welcome Back Fair"], userId: student2.id, qrToken: "QR-JORDAN-WELCOME", createdAt: daysAgo(38), claimedAt: daysAgo(38), usedAt: daysAgo(5) },
-      { eventId: id["Welcome Back Fair"], userId: organizer1.id, qrToken: "QR-ORG1-WELCOME", createdAt: daysAgo(35), claimedAt: daysAgo(35), usedAt: daysAgo(5) },
-      { eventId: id["Welcome Back Fair"], userId: student3.id, qrToken: "QR-TAYLOR-WELCOME", createdAt: daysAgo(30), claimedAt: daysAgo(30) }, // Not checked in yet
+      // Welcome Back Fair - past event with completed check-ins
+      { eventId: id["Welcome Back Fair"], userId: student1.id, qrToken: "QR-CASEY-WELCOME", createdAt: daysAgo(40), claimedAt: daysAgo(40), usedAt: daysAgo(7) },
+      { eventId: id["Welcome Back Fair"], userId: student2.id, qrToken: "QR-JORDAN-WELCOME", createdAt: daysAgo(38), claimedAt: daysAgo(38), usedAt: daysAgo(7) },
+      { eventId: id["Welcome Back Fair"], userId: student3.id, qrToken: "QR-TAYLOR-WELCOME-CHECKED", createdAt: daysAgo(35), claimedAt: daysAgo(35), usedAt: daysAgo(7) },
       { eventId: id["Welcome Back Fair"], userId: student4.id, qrToken: "QR-SAM-WELCOME", createdAt: daysAgo(25), claimedAt: daysAgo(25) },
 
-      // Career Development Workshop - recent ticket sales, some checked in
+      // Career Development Workshop - recent ticket sales, no check-ins yet (upcoming)
       { eventId: id["Career Development Workshop"], userId: student3.id, qrToken: "QR-TAYLOR-CAREER", createdAt: daysAgo(15), claimedAt: daysAgo(15) },
-      { eventId: id["Career Development Workshop"], userId: admin1.id, qrToken: "QR-ADMIN-CAREER", createdAt: daysAgo(10), claimedAt: daysAgo(10) },
+      { eventId: id["Career Development Workshop"], userId: student4.id, qrToken: "QR-SAM-CAREER", createdAt: daysAgo(10), claimedAt: daysAgo(10) },
       { eventId: id["Career Development Workshop"], userId: student1.id, qrToken: "QR-CASEY-CAREER", createdAt: daysAgo(8), claimedAt: daysAgo(8) },
 
-      // Full-Stack Coding Bootcamp - paid event with good sales and attendance
+      // Full-Stack Coding Bootcamp - paid event with strong pre-sales (no check-ins yet)
       { eventId: id["Full-Stack Coding Bootcamp"], userId: student1.id, qrToken: "QR-CASEY-BOOTCAMP", createdAt: daysAgo(18), claimedAt: daysAgo(18) },
-      { eventId: id["Full-Stack Coding Bootcamp"], userId: admin1.id, qrToken: "QR-ADMIN-BOOTCAMP", createdAt: daysAgo(17), claimedAt: daysAgo(17) },
+      { eventId: id["Full-Stack Coding Bootcamp"], userId: student4.id, qrToken: "QR-SAM-BOOTCAMP-EARLY", createdAt: daysAgo(17), claimedAt: daysAgo(17) },
       { eventId: id["Full-Stack Coding Bootcamp"], userId: student2.id, qrToken: "QR-JORDAN-BOOTCAMP", createdAt: daysAgo(15), claimedAt: daysAgo(15) },
       { eventId: id["Full-Stack Coding Bootcamp"], userId: student3.id, qrToken: "QR-TAYLOR-BOOTCAMP", createdAt: daysAgo(12), claimedAt: daysAgo(12) },
-      { eventId: id["Full-Stack Coding Bootcamp"], userId: student4.id, qrToken: "QR-SAM-BOOTCAMP", createdAt: daysAgo(10), claimedAt: daysAgo(10) },
 
       // Tech Networking Night - draft event with some interest
       { eventId: id["Tech Networking Night"], userId: student2.id, qrToken: "QR-JORDAN-NET", createdAt: daysAgo(12), claimedAt: daysAgo(12) },
@@ -312,11 +310,9 @@ async function main() {
 
       // Hackathon 2025 - popular event with many tickets over time
       { eventId: id["Hackathon 2025"], userId: student4.id, qrToken: "QR-SAM-HACK", createdAt: daysAgo(55), claimedAt: daysAgo(55) },
-      { eventId: id["Hackathon 2025"], userId: organizer2.id, qrToken: "QR-ORG2-HACK", createdAt: daysAgo(50), claimedAt: daysAgo(50) },
+      { eventId: id["Hackathon 2025"], userId: student2.id, qrToken: "QR-JORDAN-HACK-EARLY", createdAt: daysAgo(50), claimedAt: daysAgo(50) },
       { eventId: id["Hackathon 2025"], userId: student1.id, qrToken: "QR-CASEY-HACK", createdAt: daysAgo(45), claimedAt: daysAgo(45) },
-      { eventId: id["Hackathon 2025"], userId: student2.id, qrToken: "QR-JORDAN-HACK", createdAt: daysAgo(40), claimedAt: daysAgo(40) },
       { eventId: id["Hackathon 2025"], userId: student3.id, qrToken: "QR-TAYLOR-HACK", createdAt: daysAgo(35), claimedAt: daysAgo(35) },
-      { eventId: id["Hackathon 2025"], userId: admin1.id, qrToken: "QR-ADMIN-HACK", createdAt: daysAgo(30), claimedAt: daysAgo(30) },
 
       // Startup Pitch Night - recent draft with good interest
       { eventId: id["Startup Pitch Night"], userId: student3.id, qrToken: "QR-TAYLOR-PITCH", createdAt: daysAgo(7), claimedAt: daysAgo(7) },
@@ -326,16 +322,16 @@ async function main() {
       { eventId: id["Summer Wrap-Up Social"], userId: student1.id, qrToken: "QR-CASEY-SUMMER", createdAt: daysAgo(65), claimedAt: daysAgo(65), usedAt: daysAgo(5) },
       { eventId: id["Summer Wrap-Up Social"], userId: student2.id, qrToken: "QR-JORDAN-SUMMER", createdAt: daysAgo(60), claimedAt: daysAgo(60), usedAt: daysAgo(5) },
 
-      // React Workshop Series - recent tickets with varied check-ins
+      // React Workshop Series - recent tickets, check-ins start day-of
       { eventId: id["React Workshop Series"], userId: student2.id, qrToken: "QR-JORDAN-REACT", createdAt: daysAgo(20), claimedAt: daysAgo(20) },
       { eventId: id["React Workshop Series"], userId: student3.id, qrToken: "QR-TAYLOR-REACT", createdAt: daysAgo(18), claimedAt: daysAgo(18) },
       { eventId: id["React Workshop Series"], userId: student4.id, qrToken: "QR-SAM-REACT", createdAt: daysAgo(15), claimedAt: daysAgo(15) },
 
-      // AI & Machine Learning Symposium - premium event with good attendance tracking
+      // AI & Machine Learning Symposium - premium event with pre-sales (attendance tracked day-of)
       { eventId: id["AI & Machine Learning Symposium"], userId: student1.id, qrToken: "QR-CASEY-AI", createdAt: daysAgo(32), claimedAt: daysAgo(32) },
       { eventId: id["AI & Machine Learning Symposium"], userId: student2.id, qrToken: "QR-JORDAN-AI", createdAt: daysAgo(30), claimedAt: daysAgo(30) },
       { eventId: id["AI & Machine Learning Symposium"], userId: student3.id, qrToken: "QR-TAYLOR-AI", createdAt: daysAgo(28), claimedAt: daysAgo(28) },
-      { eventId: id["AI & Machine Learning Symposium"], userId: admin1.id, qrToken: "QR-ADMIN-AI", createdAt: daysAgo(25), claimedAt: daysAgo(25) },
+      { eventId: id["AI & Machine Learning Symposium"], userId: student4.id, qrToken: "QR-SAM-AI", createdAt: daysAgo(25), claimedAt: daysAgo(25) },
 
       // Game Night Extravaganza - very recent event with progressive ticket sales
       { eventId: id["Game Night Extravaganza"], userId: student1.id, qrToken: "QR-CASEY-GAME", createdAt: daysAgo(4), claimedAt: daysAgo(4) },
