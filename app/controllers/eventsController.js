@@ -312,25 +312,11 @@ const event_details_student = async (req, res) => {
   try {
     const event = await prisma.event.findFirst({
       where: { id: req.params.id, published: true, moderationStatus: "approved" },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        startsAt: true,
-        endsAt: true,
-        location: true,
-        type: true,
-        price: true,
-        capacity: true,
-        formattedAddress: true,
-        latitude: true,
-        longitude: true,
-        geocodeStatus: true,
-        geocodeMessage: true,
+      include: {
         organizer: {select: {id: true, firstName: true, lastName: true}},
         _count: {select: {tickets: true}},
-  },
-});
+      },
+  });
 
     const accepts = (req.headers.accept || "").toLowerCase();
     const prefersHtml = accepts.includes("text/html") || accepts.includes("*/*");
@@ -553,21 +539,7 @@ const event_details_organizer = async (req, res) => {
     const organizerId = req.organizerId;
     const event = await prisma.event.findFirst({
       where: {id: req.params.eventId, organizerId},
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        startsAt: true,
-        endsAt: true,
-        location: true,
-        type: true,
-        price: true,
-        capacity: true,
-        formattedAddress: true,
-        latitude: true,
-        longitude: true,
-        geocodeStatus: true,
-        geocodeMessage: true,
+      include: {
         organizer: {
           select: {id: true, firstName: true, lastName: true, email: true},
         },
