@@ -216,13 +216,24 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const showPreviewModal = (imageData) => {
+    // Hide any previous errors
+    const errorDiv = document.getElementById('bannerError');
+    if(errorDiv) errorDiv.classList.add('hidden');
+    
     pendingBanner = imageData;
     if(previewImage && imageData.imagePath){
       previewImage.src = `${imageData.imagePath}?t=${Date.now()}`;
+      previewImage.alt = 'Preview of generated banner for ' + (document.title || 'this event');
     }
     if(previewModal){
       const modal = new bootstrap.Modal(previewModal);
       modal.show();
+      
+      // Set focus to modal for accessibility
+      previewModal.addEventListener('shown.bs.modal', () => {
+        const acceptBtn = previewModal.querySelector('[data-action="accept-banner"]');
+        if(acceptBtn) acceptBtn.focus();
+      }, { once: true });
       
       // Clean up temp file if modal is closed without accepting
       previewModal.addEventListener('hidden.bs.modal', () => {
@@ -236,7 +247,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const acceptBanner = async () => {
     if(pendingBanner){
+      const errorDiv = document.getElementById('bannerError');
+      const errorMsg = document.getElementById('bannerErrorMessage');
+      
       try {
+        // Validate image path
+        if(!pendingBanner.imagePath || !pendingBanner.imagePath.startsWith('/event-images/')){
+          throw new Error('Invalid image path');
+        }
+        
         // Call accept endpoint to finalize the banner
         const res = await fetch(`/organizers/${organizerId}/events/${eventId}/accept-banner`, {
           method: 'POST',
@@ -251,12 +270,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if(res.ok){
           refreshBannerDisplay(json);
-          showToast('Banner saved','success');
+          showToast('Banner saved successfully','success');
           pendingBanner = null;
           const modal = bootstrap.Modal.getInstance(previewModal);
           if(modal) modal.hide();
         } else {
-          showToast(json.error || 'Failed to save banner', 'error');
+          const errText = json.error || 'Failed to save banner. Please try again.';
+          if(errorDiv && errorMsg){
+            errorMsg.textContent = errText;
+            errorDiv.classList.remove('hidden');
+          }
+          showToast(errText, 'error');
         }
       } catch(err) {
         console.error('Accept banner error:', err);
@@ -288,11 +312,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if(aiBannerButton && organizerId && eventId){
     aiBannerButton.addEventListener('click', async () => {
-      const prompt = window.prompt('Describe the banner you want to generate (vivid, concise prompts work best)');
-      if(!prompt) return showToast('Prompt is required','info');
-      const originalHtml = aiBannerButton.innerHTML;
+      const rawPrompt = window.prompt('Describe the banner you want to generate (vivid, concise prompts work best).\n\nNote: Generation takes 10-60 seconds.\nLeave empty to auto-generate from event details.');
+      if(rawPrompt === null) return; // User cancelled
+      
+      const prompt = rawPrompt.trim(); // Trim whitespace, allow empty string
+      
+      // Show loading state
+      const btnText = aiBannerButton.querySelector('.btn-text');
+      const btnLoading = aiBannerButton.querySelector('.btn-loading');
+      if(btnText) btnText.classList.add('hidden');
+      if(btnLoading) btnLoading.classList.remove('hidden');
       aiBannerButton.disabled = true;
-      aiBannerButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+      
       try{
         const res = await fetch(`/organizers/${organizerId}/events/${eventId}/generate-image`, {
           method: 'POST',
@@ -310,8 +341,10 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error(err);
         showToast('Network error','error');
       }finally{
+        // Restore button state
+        if(btnText) btnText.classList.remove('hidden');
+        if(btnLoading) btnLoading.classList.add('hidden');
         aiBannerButton.disabled = false;
-        aiBannerButton.innerHTML = originalHtml;
         const hasImageNow = bannerImage && !bannerImage.classList.contains('hidden');
         setBannerLabel(Boolean(hasImageNow));
       }
