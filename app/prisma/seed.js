@@ -99,7 +99,7 @@ async function main() {
     endsAt: hoursAfter(daysFromNow(14), 6),
     location: "EV 12.221",
     type: "paid",
-    price: 2500, // $25.00
+    price: 2500,
     capacity: 50,
     organizerId: organizer2.id,
     published: true,
@@ -116,7 +116,7 @@ async function main() {
     price: 0,
     capacity: 120,
     organizerId: organizer2.id,
-    published: false, // draft
+    published: false,
     category: "Career development"
   });
 
@@ -128,7 +128,7 @@ async function main() {
     endsAt: hoursAfter(daysFromNow(30), 48),
     location: "Conference Hall",
     type: "paid",
-    price: 1500, // $15.00
+    price: 1500,
     capacity: 300,
     organizerId: organizer3.id,
     published: true,
@@ -142,10 +142,10 @@ async function main() {
     endsAt: hoursAfter(daysFromNow(40), 4),
     location: "MB Auditorium",
     type: "paid",
-    price: 1000, // $10.00
+    price: 1000,
     capacity: 150,
     organizerId: organizer3.id,
-    published: false, // draft
+    published: false,
     category: "Career development"
   });
   await addEvent({
