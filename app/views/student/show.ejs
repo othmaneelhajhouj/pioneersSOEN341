@@ -33,16 +33,17 @@
     %>
     <article class="card bg-dark border-secondary shadow-sm">
       <div class="card-body">
-        <section class="event-banner mb-4">
+        <section class="event-banner-visual mb-4" role="img" aria-label="Event banner">
           <% if (event.generatedBannerPath) { %>
             <img
               src="<%= event.generatedBannerPath %>"
-              alt="AI-generated banner for <%= event.title %>"
-              class="event-banner-img"
+              alt="<%= event.title %> - <%= event.description.substring(0, 100) %>..."
+              class="event-banner-image"
+              loading="lazy"
             />
           <% } else { %>
             <div class="event-banner-placeholder">
-              <i class="fa-solid fa-image fa-2x"></i>
+              <i class="fa-solid fa-image fa-2x" aria-hidden="true"></i>
               <p class="helper mt-2">Custom banner coming soon.</p>
             </div>
           <% } %>
