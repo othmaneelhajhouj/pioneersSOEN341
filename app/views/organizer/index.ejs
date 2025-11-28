@@ -188,6 +188,7 @@
         data-event-id="<%= e.id %>"
         data-organizer="<%= organizerId %>"
         data-title="<%= escapeAttr(e.title) %>"
+        data-description="<%= escapeAttr(e.description) %>"
         data-location="<%= escapeAttr(e.location) %>"
         data-type="<%= e.type %>"
         data-published="<%= e.published ? 'true' : 'false' %>"
@@ -270,6 +271,7 @@
           <!-- Action Buttons -->
           <div class="o-actions">
             <a class="btn secondary" href="/organizers/<%= organizerId %>/events/<%= e.id %>"><i class="fa-solid fa-up-right-from-square"></i> View</a>
+            <button class="btn ghost" type="button" data-action="edit" data-event-id="<%= e.id %>"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
             <button class="btn danger" type="button" data-action="delete" data-event-id="<%= e.id %>"><i class="fa-solid fa-trash"></i> Delete</button>
           </div>
         </div>

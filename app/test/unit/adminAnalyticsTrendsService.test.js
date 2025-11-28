@@ -1,10 +1,15 @@
-const {getTrends} = require('../../dist/services/adminAnalyticsTrendsService');
-const {prisma} = require('../../dist/db');
+const { getTrends } = require('../../dist/services/adminAnalyticsTrendsService');
+const { prisma } = require('../../dist/db');
 
-// database for test
+// Mock prisma
 jest.mock('../../dist/db', () => ({
     prisma: {
-        $queryRawUnsafe: jest.fn(),
+        event: {
+            findMany: jest.fn(),
+        },
+        ticket: {
+            findMany: jest.fn(),
+        },
     },
 }));
 
@@ -14,223 +19,129 @@ describe('getTrends', () => {
         jest.clearAllMocks();
     });
 
-    // Return the right structure
     it('should return an object with eventsCreated, ticketsIssued, and ticketsUsed', async () => {
-
         const from = new Date('2024-01-01');
         const to = new Date('2024-01-31');
 
-
-        prisma.$queryRawUnsafe.mockResolvedValue([]);
-
+        prisma.event.findMany.mockResolvedValue([]);
+        prisma.ticket.findMany.mockResolvedValue([]);
 
         const result = await getTrends({ from, to, buckets: 'day' });
-
 
         expect(result).toHaveProperty('eventsCreated');
         expect(result).toHaveProperty('ticketsIssued');
         expect(result).toHaveProperty('ticketsUsed');
     });
 
-    // Return data correctly
-    it('should return trend data with period and count', async () => {
+    it('should correctly tally events by day', async () => {
         const from = new Date('2024-01-01');
         const to = new Date('2024-01-31');
 
-
-        const fakeData = [
-            { period: '2024-01-01', count: 5 },
-            { period: '2024-01-02', count: 10 },
+        const mockEvents = [
+            { createdAt: new Date('2024-01-01T10:00:00Z') },
+            { createdAt: new Date('2024-01-01T15:00:00Z') },
+            { createdAt: new Date('2024-01-02T09:00:00Z') },
         ];
 
-
-        prisma.$queryRawUnsafe
-            .mockResolvedValueOnce(fakeData)
-            .mockResolvedValueOnce(fakeData)
-            .mockResolvedValueOnce(fakeData);
-
+        prisma.event.findMany.mockResolvedValue(mockEvents);
+        prisma.ticket.findMany.mockResolvedValue([]);
 
         const result = await getTrends({ from, to, buckets: 'day' });
 
-
         expect(result.eventsCreated).toEqual([
-            { period: '2024-01-01', count: 5 },
-            { period: '2024-01-02', count: 10 },
+            { period: '2024-01-01', count: 2 },
+            { period: '2024-01-02', count: 1 },
         ]);
     });
 
-    // Handle BigInt correctly
-    it('should convert BigInt counts to regular numbers', async () => {
+    it('should correctly tally tickets issued and used', async () => {
         const from = new Date('2024-01-01');
         const to = new Date('2024-01-31');
 
-
-        const fakeData = [
-            { period: '2024-01-01', count: BigInt(100) },
+        const mockIssued = [
+            { createdAt: new Date('2024-01-05T10:00:00Z') },
+        ];
+        const mockUsed = [
+            { usedAt: new Date('2024-01-05T12:00:00Z') },
+            { usedAt: new Date('2024-01-06T12:00:00Z') },
         ];
 
-        prisma.$queryRawUnsafe
-            .mockResolvedValueOnce(fakeData)
-            .mockResolvedValueOnce(fakeData)
-            .mockResolvedValueOnce(fakeData);
+        prisma.event.findMany.mockResolvedValue([]);
+        prisma.ticket.findMany
+            .mockResolvedValueOnce(mockIssued) // First call for issued
+            .mockResolvedValueOnce(mockUsed);   // Second call for used
 
         const result = await getTrends({ from, to, buckets: 'day' });
 
-
-        expect(result.eventsCreated[0].count).toBe(100);
-        expect(typeof result.eventsCreated[0].count).toBe('number');
+        expect(result.ticketsIssued).toEqual([
+            { period: '2024-01-05', count: 1 },
+        ]);
+        expect(result.ticketsUsed).toEqual([
+            { period: '2024-01-05', count: 1 },
+            { period: '2024-01-06', count: 1 },
+        ]);
     });
 
-    // Work with empty data
-    it('should return empty arrays when no data exists', async () => {
+    it('should handle week buckets', async () => {
         const from = new Date('2024-01-01');
         const to = new Date('2024-01-31');
 
+        // 2024-01-01 is a Monday.
+        // The service uses a custom week calculation:
+        // week = floor((dayOfYear + startOfYear.day) / 7)
 
-        prisma.$queryRawUnsafe
-            .mockResolvedValueOnce([])
-            .mockResolvedValueOnce([])
-            .mockResolvedValueOnce([]);
+        const mockEvents = [
+            { createdAt: new Date('2024-01-04T10:00:00Z') }, // Week 0 or 1 depending on logic
+            { createdAt: new Date('2024-01-05T10:00:00Z') }, // Same week
+        ];
+
+        prisma.event.findMany.mockResolvedValue(mockEvents);
+        prisma.ticket.findMany.mockResolvedValue([]);
+
+        const result = await getTrends({ from, to, buckets: 'week' });
+
+        expect(result.eventsCreated).toHaveLength(1);
+        expect(result.eventsCreated[0].count).toBe(2);
+        expect(result.eventsCreated[0].period).toMatch(/^\d{4}-\d{2}$/);
+    });
+
+    it('should handle empty data', async () => {
+        const from = new Date('2024-01-01');
+        const to = new Date('2024-01-31');
+
+        prisma.event.findMany.mockResolvedValue([]);
+        prisma.ticket.findMany.mockResolvedValue([]);
 
         const result = await getTrends({ from, to, buckets: 'day' });
-
 
         expect(result.eventsCreated).toEqual([]);
         expect(result.ticketsIssued).toEqual([]);
         expect(result.ticketsUsed).toEqual([]);
     });
 
-    // Call the database the correct number of times
-    it('should make 3 database queries (one for each trend type)', async () => {
+    it('should call prisma with correct date ranges', async () => {
         const from = new Date('2024-01-01');
         const to = new Date('2024-01-31');
+        const dateRange = { gte: from, lte: to };
 
-        prisma.$queryRawUnsafe.mockResolvedValue([]);
+        prisma.event.findMany.mockResolvedValue([]);
+        prisma.ticket.findMany.mockResolvedValue([]);
 
         await getTrends({ from, to, buckets: 'day' });
 
+        expect(prisma.event.findMany).toHaveBeenCalledWith({
+            where: { createdAt: dateRange },
+            select: { createdAt: true }
+        });
 
-        expect(prisma.$queryRawUnsafe).toHaveBeenCalledTimes(3);
-    });
+        expect(prisma.ticket.findMany).toHaveBeenCalledWith({
+            where: { createdAt: dateRange },
+            select: { createdAt: true }
+        });
 
-    // Work with 'week' buckets
-    it('should work with week buckets', async () => {
-        const from = new Date('2024-01-01');
-        const to = new Date('2024-01-31');
-
-        const fakeData = [
-            { period: '2024-01', count: 15 },
-        ];
-
-        prisma.$queryRawUnsafe
-            .mockResolvedValueOnce(fakeData)
-            .mockResolvedValueOnce(fakeData)
-            .mockResolvedValueOnce(fakeData);
-
-        const result = await getTrends({ from, to, buckets: 'week' });
-
-
-        expect(result.eventsCreated[0].period).toBe('2024-01');
-        expect(result.eventsCreated[0].count).toBe(15);
-    });
-
-    // Pass the correct dates to the database
-    it('should pass the from and to dates to all database queries', async () => {
-        const from = new Date('2024-01-01');
-        const to = new Date('2024-01-31');
-
-        prisma.$queryRawUnsafe.mockResolvedValue([]);
-
-        await getTrends({ from, to, buckets: 'day' });
-
-
-        expect(prisma.$queryRawUnsafe).toHaveBeenNthCalledWith(
-            1,
-            expect.any(String),
-            from,
-            to
-        );
-        expect(prisma.$queryRawUnsafe).toHaveBeenNthCalledWith(
-            2,
-            expect.any(String),
-            from,
-            to
-        );
-        expect(prisma.$queryRawUnsafe).toHaveBeenNthCalledWith(
-            3,
-            expect.any(String),
-            from,
-            to
-        );
-    });
-
-    // Return all 3 types of data separately
-    it('should return separate data for eventsCreated, ticketsIssued, and ticketsUsed', async () => {
-        const from = new Date('2024-01-01');
-        const to = new Date('2024-01-31');
-
-
-        const eventsData = [{ period: '2024-01-01', count: 5 }];
-        const ticketsIssuedData = [{ period: '2024-01-01', count: 10 }];
-        const ticketsUsedData = [{ period: '2024-01-01', count: 3 }];
-
-        prisma.$queryRawUnsafe
-            .mockResolvedValueOnce(eventsData)
-            .mockResolvedValueOnce(ticketsIssuedData)
-            .mockResolvedValueOnce(ticketsUsedData);
-
-        const result = await getTrends({ from, to, buckets: 'day' });
-
-
-        expect(result.eventsCreated[0].count).toBe(5);
-        expect(result.ticketsIssued[0].count).toBe(10);
-        expect(result.ticketsUsed[0].count).toBe(3);
-    });
-
-    // Period always becomes a string
-    it('should convert period to a string even if database returns a number', async () => {
-        const from = new Date('2024-01-01');
-        const to = new Date('2024-01-31');
-
-
-        const fakeData = [
-            { period: 20240101, count: 5 },
-        ];
-
-        prisma.$queryRawUnsafe
-            .mockResolvedValueOnce(fakeData)
-            .mockResolvedValueOnce(fakeData)
-            .mockResolvedValueOnce(fakeData);
-
-        const result = await getTrends({ from, to, buckets: 'day' });
-
-
-        expect(typeof result.eventsCreated[0].period).toBe('string');
-        expect(result.eventsCreated[0].period).toBe('20240101');
-    });
-
-    // Handles multiple data points
-    it('should handle multiple rows of data correctly', async () => {
-        const from = new Date('2024-01-01');
-        const to = new Date('2024-01-31');
-
-        const fakeData = [
-            { period: '2024-01-01', count: 5 },
-            { period: '2024-01-02', count: 8 },
-            { period: '2024-01-03', count: 12 },
-        ];
-
-        prisma.$queryRawUnsafe
-            .mockResolvedValueOnce(fakeData)
-            .mockResolvedValueOnce(fakeData)
-            .mockResolvedValueOnce(fakeData);
-
-        const result = await getTrends({ from, to, buckets: 'day' });
-
-
-        expect(result.eventsCreated).toHaveLength(3);
-        expect(result.eventsCreated[0].count).toBe(5);
-        expect(result.eventsCreated[1].count).toBe(8);
-        expect(result.eventsCreated[2].count).toBe(12);
+        expect(prisma.ticket.findMany).toHaveBeenCalledWith({
+            where: { usedAt: { ...dateRange, not: null } },
+            select: { usedAt: true }
+        });
     });
 });

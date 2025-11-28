@@ -1,5 +1,9 @@
 // Event details page script 
 import { showToast } from './core.toast.js';
+import { prepareNativeDateTimeInputs } from './core.datetime.js';
+
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
 
 document.addEventListener('DOMContentLoaded', () => {
   const flashMessage = document.body.dataset.flash || '';
@@ -59,6 +63,164 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }catch(err){ console.error(err); showToast('Network error','error'); delBtn.disabled=false; }
     });
+  }
+
+  // Bind edit button to open modal
+  const editBtn = document.getElementById('editEvent');
+  if(editBtn){
+    editBtn.addEventListener('click', () => {
+      openEditModal();
+    });
+  }
+
+  // Edit modal functions
+  function openEditModal(){
+    const wrap = $('#editEventModal');
+    if(!wrap) return;
+    
+    // Populate dates from existing event data in the page
+    const eventData = window.eventData || {};
+    if(eventData.startsAt) {
+      const startDate = new Date(eventData.startsAt);
+      $('#editStartDate').value = startDate.toISOString().split('T')[0];
+      $('#editStartTime').value = startDate.toTimeString().slice(0,5);
+    }
+    if(eventData.endsAt) {
+      const endDate = new Date(eventData.endsAt);
+      $('#editEndDate').value = endDate.toISOString().split('T')[0];
+      $('#editEndTime').value = endDate.toTimeString().slice(0,5);
+    }
+    
+    wrap.classList.remove('hidden');
+    document.body.classList.add('modal-open');
+    prepareNativeDateTimeInputs(wrap, 'edit');
+    setupEditTicketTypeHandler();
+    
+    const focusables = wrap.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])');
+    const first = focusables[0];
+    const last = focusables[focusables.length-1];
+    if(first) first.focus();
+    
+    const trap = e => {
+      if(e.key==='Escape') return closeEditModal();
+      if(e.key==='Tab'){
+        if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+        else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+      }
+    };
+    wrap.addEventListener('keydown', trap);
+    wrap._trapHandler = trap;
+  }
+
+  function closeEditModal(){
+    const wrap = $('#editEventModal');
+    if(wrap){
+      wrap.classList.add('hidden');
+      document.body.classList.remove('modal-open');
+      if(wrap._trapHandler){ wrap.removeEventListener('keydown', wrap._trapHandler); delete wrap._trapHandler; }
+    }
+    const err = $('#editEventErrors'); 
+    if(err){ err.classList.add('hidden'); err.textContent=''; }
+  }
+
+  function setupEditTicketTypeHandler(){
+    const typeSel = $('#editType');
+    const price = $('#editPrice');
+    if(!typeSel || !price) return;
+    const update = () => { const free = typeSel.value==='free'; price.disabled=free; if(free) price.value=''; };
+    update();
+    typeSel.addEventListener('change', update);
+  }
+
+  function showEditModalErrors(errors){
+    const box = $('#editEventErrors');
+    if(!box) return;
+    const list = (Array.isArray(errors)?errors:[errors]).filter(Boolean);
+    box.setAttribute('role','alert');
+    box.innerHTML = `<div class="err-title"><i class="fa-solid fa-triangle-exclamation"></i> Issues</div><ul>${list.map(e=>`<li>${e}</li>`).join('')}</ul>`;
+    box.classList.remove('hidden');
+    const map = {title:'editTitle',description:'editDescription',location:'editLocation',capacity:'editCapacity',start:'editStarts',end:'editEnds',price:'editPrice'};
+    Object.values(map).forEach(id => $('#'+id)?.classList.remove('invalid'));
+    const joined = list.join(' ').toLowerCase();
+    for(const k in map){ if(joined.includes(k)){ const el = $('#'+map[k]); if(el){ el.classList.add('invalid'); el.focus(); } break; } }
+  }
+
+  async function handleEditEvent(e){
+    e.preventDefault();
+    const form = $('#editEventForm');
+    const submitBtn = $('#editEventSubmit');
+    if(!form || !submitBtn) return;
+    
+    const data = new FormData(form);
+    const eventId = data.get('eventId');
+    const startsAt = data.get('startsAt');
+    const endsAt = data.get('endsAt');
+    
+    if(startsAt && endsAt){
+      const s = +new Date(startsAt), en = +new Date(endsAt);
+      if(!isNaN(s) && !isNaN(en) && en <= s){
+        showEditModalErrors('End must be after Start');
+        showToast('End must be after Start','error');
+        return;
+      }
+    }
+    
+    const payload = {
+      title: data.get('title'),
+      description: data.get('description'),
+      location: data.get('location'),
+      startsAt, endsAt,
+      type: data.get('type'),
+      capacity: parseInt(data.get('capacity'))||0,
+      price: parseFloat(data.get('price'))||0,
+      published: data.get('published')==='on'
+    };
+    
+    const organizerId = document.body.dataset.organizerId;
+    if(!organizerId){ showToast('No organizer','error'); return; }
+    
+    const original = submitBtn.innerHTML;
+    submitBtn.disabled = true; submitBtn.dataset.loading='true'; submitBtn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+    
+    try{
+      const res = await fetch(`/organizers/${organizerId}/events/${eventId}`,{
+        method:'PATCH',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload)
+      });
+      const json = await res.json();
+      if(res.ok){
+        showToast(json.message || 'Updated!','success');
+        closeEditModal();
+        setTimeout(()=> location.reload(), 700);
+      } else {
+        showEditModalErrors(json.details || json.errors || json.error || 'Failed to update');
+        showToast('Fix errors','error');
+      }
+    }catch(err){ 
+      console.error(err); 
+      showEditModalErrors('Network error'); 
+      showToast('Network error','error'); 
+    }
+    finally { 
+      submitBtn.disabled=false; 
+      delete submitBtn.dataset.loading; 
+      submitBtn.innerHTML=original; 
+    }
+  }
+
+  // Wire up edit modal
+  $$('[data-close-edit-modal]').forEach(b=> b.addEventListener('click', closeEditModal));
+  const editBackdrop = $('#editEventModal');
+  if(editBackdrop) editBackdrop.addEventListener('click', e=> { if(e.target===editBackdrop) closeEditModal(); });
+  $('#editEventForm')?.addEventListener('submit', handleEditEvent);
+
+  // Check if we should auto-open edit modal from URL parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  if(urlParams.get('edit') === 'true'){
+    setTimeout(() => openEditModal(), 100);
+    // Clean up URL
+    window.history.replaceState({}, '', window.location.pathname);
   }
 
   // QR validation helpers

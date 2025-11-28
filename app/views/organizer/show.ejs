@@ -160,6 +160,7 @@
         <div class="o-sub" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;">Actions</div>
         <div style="display:flex;flex-direction:column;gap:10px;">
           <a href="/organizers/<%= organizerId %>/events" class="btn ghost"><i class="fa-solid fa-arrow-left"></i> Back</a>
+          <button class="btn secondary" id="editEvent" data-event-id="<%= event.id %>" type="button"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
           <button class="btn danger" id="deleteEvent" data-event-id="<%= event.id %>" type="button"><i class="fa-solid fa-trash"></i> Delete</button>
         </div>
       </div>
@@ -201,29 +202,37 @@
         <span><i class="fa-regular fa-clock"></i> <%= formatDateTime(event.startsAt) %></span>
         <span><i class="fa-solid fa-hourglass-half"></i> Ends <%= formatDateTime(event.endsAt) %></span>
         <span><i class="fa-solid fa-location-dot"></i> <%= map.address || event.location %></span>
-        <% if (map.hasMap) { %>
-          <div
-            id="organizerEventMap"
-            class="event-map mt-3"
-            data-lat="<%= map.lat %>"
-            data-lng="<%= map.lng %>"
-            data-address="<%= map.address %>">
-          </div>
-          <a href="<%= map.directionsUrl %>"
-            target="_blank"
-            rel="noopener"
-            class="btn btn-outline-light btn-sm mt-2">
-            Get Directions
-          </a>
-        <% } else { %>
-          <p class="helper mt-2">
-            Map unavailable (<%= map.status %><%= map.message ? ': ' + map.message : '' %>).
-          </p>
-        <% } %>
         <span><i class="fa-solid fa-people-group"></i> Capacity <%= capacity %></span>
         <span><i class="fa-solid fa-circle-check"></i> Checked in <%= checkedIn %></span>
       </div>
     </section>
+
+    <% if (map.hasMap) { %>
+    <section class="row-card" style="display:grid;gap:14px;margin-bottom:34px;">
+      <div class="o-title" style="font-size:20px;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-map-location-dot"></i> Location</div>
+      <div
+        id="organizerEventMap"
+        class="event-map"
+        data-lat="<%= map.lat %>"
+        data-lng="<%= map.lng %>"
+        data-address="<%= map.address %>">
+      </div>
+      <a href="<%= map.directionsUrl %>"
+        target="_blank"
+        rel="noopener"
+        class="btn ghost"
+        style="width:fit-content;">
+        <i class="fa-solid fa-diamond-turn-right"></i> Get Directions
+      </a>
+    </section>
+    <% } else { %>
+    <section class="row-card" style="display:grid;gap:14px;margin-bottom:34px;">
+      <div class="o-title" style="font-size:20px;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-map-location-dot"></i> Location</div>
+      <p class="helper">
+        Map unavailable (<%= map.status %><%= map.message ? ': ' + map.message : '' %>).
+      </p>
+    </section>
+    <% } %>
 
     <section class="row-card" style="display:grid;gap:18px;margin-bottom:28px;">
       <div class="o-title" style="font-size:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
@@ -244,7 +253,9 @@
                 <th style="padding:10px 12px;font-weight:600;color:var(--ink);">Name</th>
                 <th style="padding:10px 12px;font-weight:600;color:var(--ink);">Email</th>
                 <th style="padding:10px 12px;font-weight:600;color:var(--ink);">Ticket ID</th>
+                <th style="padding:10px 12px;font-weight:600;color:var(--ink);white-space:nowrap;">QR Token</th>
                 <th style="padding:10px 12px;font-weight:600;color:var(--ink);">Purchased</th>
+                <th style="padding:10px 12px;font-weight:600;color:var(--ink);white-space:nowrap;">Used At</th>
               </tr>
             </thead>
             <tbody>
@@ -253,7 +264,9 @@
                 <td style="padding:9px 12px;white-space:nowrap;color:var(--ink);"> <%= ticket.user ? ticket.user.firstName + ' ' + ticket.user.lastName : 'N/A' %></td>
                 <td style="padding:9px 12px;color:var(--ink);"> <%= ticket.user ? ticket.user.email : '—' %></td>
                 <td style="padding:9px 12px;"> <code style="color:var(--gold);"><%= ticket.id %></code></td>
+                <td style="padding:9px 12px;color:var(--ink);white-space:nowrap;"> <%= ticket.qrToken || '—' %></td>
                 <td style="padding:9px 12px;color:var(--ink);"> <%= ticket.createdAt ? formatDateTime(ticket.createdAt) : '—' %></td>
+                <td style="padding:9px 12px;color:var(--ink);white-space:nowrap;"> <%= ticket.usedAt ? formatDateTime(ticket.usedAt) : 'Not used' %></td>
               </tr>
               <% }) %>
             </tbody>
@@ -288,6 +301,84 @@
   <% } %>
 </main>
 
+<!-- Edit Event Modal -->
+<div class="modal-backdrop hidden" id="editEventModal" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="modal-panel" role="document">
+    <div class="modal-header">
+      <div class="modal-title"><i class="fa-solid fa-pen-to-square"></i> Edit Event</div>
+      <button type="button" class="modal-close" data-close-edit-modal aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form id="editEventForm" class="modal-body">
+      <div id="editEventErrors" class="modal-errors hidden" aria-live="assertive"></div>
+      <input type="hidden" id="editEventId" name="eventId" value="<%= event ? event.id : '' %>" />
+      <div class="field-group">
+        <label class="label" for="editTitle">Title</label>
+        <input class="field" id="editTitle" name="title" type="text" maxlength="120" value="<%= event ? escapeAttr(event.title) : '' %>" required />
+      </div>
+      <div class="field-group">
+        <label class="label" for="editDescription">Description</label>
+        <textarea class="field" id="editDescription" name="description" rows="3" maxlength="500" required><%= event ? escapeAttr(event.description) : '' %></textarea>
+      </div>
+      <div class="field-grid">
+        <div class="field-group">
+          <label class="label" for="editLocation">Location</label>
+          <input class="field" id="editLocation" name="location" type="text" maxlength="140" value="<%= event ? escapeAttr(event.location) : '' %>" required />
+        </div>
+        <div class="field-group">
+          <label class="label" for="editType">Type</label>
+          <select class="select" id="editType" name="type" required>
+            <option value="free" <%= event && event.type === 'free' ? 'selected' : '' %>>Free</option>
+            <option value="paid" <%= event && event.type === 'paid' ? 'selected' : '' %>>Paid</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field-group">
+          <label class="label" for="editCapacity">Capacity</label>
+          <input class="field" id="editCapacity" name="capacity" type="number" min="0" step="1" value="<%= event ? event.capacity : '' %>" placeholder="0" />
+        </div>
+        <div class="field-group">
+          <label class="label" for="editPrice">Price (CAD)</label>
+          <input class="field" id="editPrice" name="price" type="number" min="0" step="0.01" value="<%= event && event.type === 'paid' && event.price ? (event.price / 100).toFixed(2) : '' %>" placeholder="0.00" />
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field-group">
+          <label class="label" for="editStartDate">Start Date</label>
+          <input class="field" id="editStartDate" type="date" required />
+        </div>
+        <div class="field-group">
+          <label class="label" for="editStartTime">Start Time</label>
+          <input class="field" id="editStartTime" type="time" step="300" required />
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field-group">
+          <label class="label" for="editEndDate">End Date</label>
+          <input class="field" id="editEndDate" type="date" required />
+        </div>
+        <div class="field-group">
+          <label class="label" for="editEndTime">End Time</label>
+          <input class="field" id="editEndTime" type="time" step="300" required />
+        </div>
+      </div>
+      <input type="hidden" name="startsAt" id="editStarts" />
+      <input type="hidden" name="endsAt" id="editEnds" />
+      <div class="field-group" style="margin-top:4px;">
+        <label class="switch" for="editPublished">
+          <input id="editPublished" name="published" type="checkbox" <%= event && event.published ? 'checked' : '' %> />
+          <span class="track"><span class="thumb"></span></span>
+          <span>Published</span>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn ghost" data-close-edit-modal><i class="fa-solid fa-xmark"></i> Cancel</button>
+        <button type="submit" class="btn secondary" id="editEventSubmit"><i class="fa-solid fa-check"></i> Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Banner Preview Modal -->
 <div class="modal fade" id="bannerPreviewModal" tabindex="-1" aria-labelledby="bannerPreviewModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -321,6 +412,23 @@
 
 <div class="toast" id="toast"></div>
 <%- include('../partials/footer') %>
+<% if (event) { %>
+<script>
+  // Make event data available to JavaScript
+  window.eventData = {
+    id: '<%= event.id %>',
+    title: '<%= escapeAttr(event.title) %>',
+    description: '<%= escapeAttr(event.description) %>',
+    location: '<%= escapeAttr(event.location) %>',
+    type: '<%= event.type %>',
+    capacity: <%= event.capacity %>,
+    price: <%= event.price || 0 %>,
+    startsAt: '<%= event.startsAt.toISOString() %>',
+    endsAt: '<%= event.endsAt.toISOString() %>',
+    published: <%= event.published %>
+  };
+</script>
+<% } %>
 <script type="module" src="/js/event-details.js"></script>
 <script type="module" src="/js/event-map.js"></script>
 </body>
