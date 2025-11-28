@@ -145,6 +145,22 @@ function bindPublishToggles(){
   }));
 }
 
+// --- Edit Buttons ---
+function bindEditButtons(){
+  $$('[data-action="edit"]').forEach(b=> b.addEventListener('click', e => {
+    const btn = e.currentTarget;
+    const card = btn.closest('[data-event-card]');
+    if(!card) return;
+    
+    const eventId = btn.dataset.eventId;
+    const organizerId = document.body.dataset.organizerId;
+    if(!organizerId || !eventId){ showToast('Missing data','error'); return; }
+    
+    // Redirect to event detail page with edit parameter
+    window.location.href = `/organizers/${organizerId}/events/${eventId}?edit=true`;
+  }));
+}
+
 // --- Delete ---
 function bindDeleteButtons(){
   $$('[data-action="delete"]').forEach(b=> b.addEventListener('click', async e => {
@@ -263,6 +279,7 @@ function initDashboard(){
   setupTicketTypeHandler();
   $('#createEventForm')?.addEventListener('submit', handleCreateEvent);
   bindPublishToggles();
+  bindEditButtons();
   bindDeleteButtons();
   bindFilters();
   filterAndSortEvents();

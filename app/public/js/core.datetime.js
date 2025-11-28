@@ -1,13 +1,13 @@
 // Datetime helpers for paired date + time inputs feeding hidden ISO fields.
 const pad2 = n => n.toString().padStart(2,'0');
 
-export function prepareNativeDateTimeInputs(root=document){
-  const startDate = root.querySelector('#modalStartDate');
-  const endDate   = root.querySelector('#modalEndDate');
-  const startTime = root.querySelector('#modalStartTime');
-  const endTime   = root.querySelector('#modalEndTime');
-  const hiddenStart = root.querySelector('#modalStarts');
-  const hiddenEnd   = root.querySelector('#modalEnds');
+export function prepareNativeDateTimeInputs(root=document, prefix='modal'){
+  const startDate = root.querySelector(`#${prefix}StartDate`);
+  const endDate   = root.querySelector(`#${prefix}EndDate`);
+  const startTime = root.querySelector(`#${prefix}StartTime`);
+  const endTime   = root.querySelector(`#${prefix}EndTime`);
+  const hiddenStart = root.querySelector(`#${prefix}Starts`);
+  const hiddenEnd   = root.querySelector(`#${prefix}Ends`);
   const now = new Date();
   const today = `${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
   if(startDate && !startDate.min) startDate.min = today;
