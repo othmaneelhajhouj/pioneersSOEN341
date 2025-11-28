@@ -1,63 +1,72 @@
-import {prisma} from "../db";
+import { prisma } from "../db";
 
-type Point = {period: string; count: number};
-type Buckets = "day" | "week";
+/**
+ * Generates a key for grouping dates.
+ * For 'day': returns "YYYY-MM-DD".
+ * For 'week': returns "YYYY-WW" (weeks start on Sunday).
+ * Uses UTC to ensure consistency regardless of server timezone.
+ */
+const getPeriodKey = (date: Date, bucket: "day" | "week"): string => {
+    if (bucket === "day") return date.toISOString().slice(0, 10);
 
-function dateExpr(buckets: Buckets , column: string) {
-    return buckets === "day" ? `DATE("${column}")` : `strftime('%Y-%W', "${column}")`           //returns sql snippet of date in days or weeks (formatted Year-Week)
-} 
+    const year = date.getUTCFullYear();
+    const startOfYear = new Date(Date.UTC(year, 0, 1));
 
-interface getTrendsArgs {
-    from: Date;
-    to: Date;
-    buckets: Buckets
-}
+    // Calculate week number (0-53) matching SQLite's %W behavior
+    // 86400000 = 1000ms * 60s * 60m * 24h (milliseconds in a day)
+    const dayOfYear = (date.getTime() - startOfYear.getTime()) / 86400000;
+    const week = Math.floor((dayOfYear + startOfYear.getUTCDay()) / 7);
 
-export async function getTrends({from, to, buckets}: getTrendsArgs) {
+    return `${year}-${String(week).padStart(2, "0")}`;
+};
 
-    //sql query templates, passed to prisma. prisma executes them to return relevant rows 
-    const eventsCreatedSql = 
-    `
-    SELECT ${dateExpr(buckets, "createdAt")} AS period, COUNT(*) AS count
-    FROM "Event"
-    WHERE "createdAt" BETWEEN ? AND ?
-    GROUP BY period
-    ORDER BY period ASC
-    `;
+/**
+ * Groups dates by period and counts occurrences.
+ * Returns a sorted list of { period, count } objects.
+ * Sorting ensures the frontend receives data in chronological order.
+ */
+const tally = (dates: (Date | null)[], bucket: "day" | "week") => {
+    const counts = dates.reduce((acc, date) => {
+        if (!date) return acc; // Skip null dates (e.g. unused tickets)
+        const key = getPeriodKey(date, bucket);
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
 
-    const ticketsIssuedSql = 
-    `SELECT ${dateExpr(buckets, "createdAt")} AS period, COUNT(*) AS count
-    FROM "Ticket"
-    WHERE "createdAt" BETWEEN ? AND ?
-    GROUP BY period
-    ORDER BY period ASC
-    `;
+    return Object.keys(counts).sort().map(period => ({ period, count: counts[period] }));
+};
 
-    const ticketsUsedSql = 
-    `SELECT ${dateExpr(buckets, "usedAt")} AS period, COUNT(*) AS count
-    FROM "Ticket"
-    WHERE "usedAt" IS NOT NULL
-    AND "usedAt" BETWEEN ? AND ?
-    GROUP BY period
-    ORDER BY period ASC
-    `;
-    
-    const [eventsCreatedRaw, ticketsIssuedRaw, ticketsUsedRaw] = await Promise.all([
-        prisma.$queryRawUnsafe<any[]>(eventsCreatedSql, from, to),
-        prisma.$queryRawUnsafe<any[]>(ticketsIssuedSql, from, to),
-        prisma.$queryRawUnsafe<any[]>(ticketsUsedSql, from, to),
+/**
+ * Fetches analytics trends for events and tickets within a date range.
+ * Aggregates data by day or week.
+ * 
+ * @param from - Start date of the range
+ * @param to - End date of the range
+ * @param buckets - Grouping interval ('day' or 'week')
+ */
+export async function getTrends({ from, to, buckets }: { from: Date; to: Date; buckets: "day" | "week" }) {
+    const dateRange = { gte: from, lte: to };
+
+    // Fetch all relevant dates in parallel
+    // Only selects the date fields to minimize data transfer
+    const [events, issued, used] = await Promise.all([
+        prisma.event.findMany({
+            where: { createdAt: dateRange },
+            select: { createdAt: true }
+        }),
+        prisma.ticket.findMany({
+            where: { createdAt: dateRange },
+            select: { createdAt: true }
+        }),
+        prisma.ticket.findMany({
+            where: { usedAt: { ...dateRange, not: null } },
+            select: { usedAt: true }
+        }),
     ]);
 
-    // need to convert from BigInt to number or res.json() cant parse it => server error 500
-    const convert = (rows: any[]): Point[] =>
-        rows.map((r) => ({
-            period: String(r.period),
-            count: typeof r.count === 'bigint' ? Number(r.count) : Number(r.count),
-        }));
-
     return {
-        eventsCreated: convert(eventsCreatedRaw),
-        ticketsIssued: convert(ticketsIssuedRaw),
-        ticketsUsed: convert(ticketsUsedRaw),
+        eventsCreated: tally(events.map(e => e.createdAt), buckets),
+        ticketsIssued: tally(issued.map(t => t.createdAt), buckets),
+        ticketsUsed: tally(used.map(t => t.usedAt), buckets),
     };
 }
